@@ -104,7 +104,7 @@ class GCNConv(MessagePassing):
 
         x = self.linear(x)
 
-        return self.propagate(self.aggr, edge_index, x=x, edge_attr=edge_embeddings, norm=norm)
+        return self.propagate(edge_index[0], x=x, edge_attr=edge_embeddings, norm=norm)
 
     def message(self, x_j, edge_attr, norm):
         return norm.view(-1, 1) * (x_j + edge_attr)
@@ -240,11 +240,12 @@ class GNN(torch.nn.Module):
         if self.num_layer < 2:
             raise ValueError("Number of GNN layers must be greater than 1.")
 
-        self.x_embedding1 = torch.nn.Embedding(num_atom_type, emb_dim)
-        self.x_embedding2 = torch.nn.Embedding(num_chirality_tag, emb_dim)
+        # self.x_embedding1 = torch.nn.Embedding(num_atom_type, emb_dim)
+        # self.x_embedding2 = torch.nn.Embedding(num_chirality_tag, emb_dim)
+        self.x_embedding = torch.nn.Linear(6, emb_dim)
 
-        torch.nn.init.xavier_uniform_(self.x_embedding1.weight.data)
-        torch.nn.init.xavier_uniform_(self.x_embedding2.weight.data)
+        torch.nn.init.xavier_uniform_(self.x_embedding.weight.data)
+        # torch.nn.init.xavier_uniform_(self.x_embedding2.weight.data)
 
         # List of MLPs
         self.gnns = torch.nn.ModuleList()
@@ -273,7 +274,9 @@ class GNN(torch.nn.Module):
         else:
             raise ValueError("unmatched number of arguments.")
 
-        x = self.x_embedding1(x[:, 0]) + self.x_embedding2(x[:, 1])
+        # self.x_embedding1(x[:, 0:9]) + self.x_embedding2(x[:, -1])
+        # print(f'x:{x}')
+        x = self.x_embedding(x)
 
         h_list = [x]
         for layer in range(self.num_layer):

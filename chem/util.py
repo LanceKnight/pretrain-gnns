@@ -32,7 +32,7 @@ class NegativeEdge:
 
         edge_set = set([str(data.edge_index[0, i].cpu().item()) + "," + str(
             data.edge_index[1, i].cpu().item()) for i in
-                        range(data.edge_index.shape[1])])
+            range(data.edge_index.shape[1])])
 
         redandunt_sample = torch.randint(0, num_nodes, (2, 5 * num_edges))
         sampled_ind = []
@@ -97,7 +97,8 @@ class ExtractSubstructureContextPair:
         if root_idx == None:
             root_idx = random.sample(range(num_atoms), 1)[0]
 
-        G = graph_data_obj_to_nx_simple(data)  # same ordering as input data obj
+        # same ordering as input data obj
+        G = graph_data_obj_to_nx_simple(data)
 
         # Get k-hop subgraph rooted at specified atom idx
         substruct_node_idxes = nx.single_source_shortest_path_length(G,
@@ -113,7 +114,7 @@ class ExtractSubstructureContextPair:
             data.edge_attr_substruct = substruct_data.edge_attr
             data.edge_index_substruct = substruct_data.edge_index
             data.center_substruct_idx = torch.tensor([substruct_node_map[
-                                                          root_idx]])  # need
+                root_idx]])  # need
             # to convert center idx from original graph node ordering to the
             # new substruct node ordering
 
@@ -238,7 +239,11 @@ class MaskAtom:
 
         # modify the original node feature of the masked node
         for atom_idx in masked_atom_indices:
-            data.x[atom_idx] = torch.tensor([self.num_atom_type, 0])
+            # print(f'data.x:{data.x.shape}')
+            # print(
+            #     f'len(masked_atom_indices):{len(masked_atom_indices)}   num_atom_type:{self.num_atom_type}')
+            data.x[atom_idx] = torch.tensor([0, 0, 0, 0, 0, 0])
+            # data.x[atom_idx] = torch.tensor([self.num_atom_type, 0])
 
         if self.mask_edge:
             # create mask edge labels by copying edge features of edges that are bonded to
@@ -247,14 +252,14 @@ class MaskAtom:
             for bond_idx, (u, v) in enumerate(data.edge_index.cpu().numpy().T):
                 for atom_idx in masked_atom_indices:
                     if atom_idx in set((u, v)) and \
-                        bond_idx not in connected_edge_indices:
+                            bond_idx not in connected_edge_indices:
                         connected_edge_indices.append(bond_idx)
 
             if len(connected_edge_indices) > 0:
                 # create mask edge labels by copying bond features of the bonds connected to
                 # the mask atoms
                 mask_edge_labels_list = []
-                for bond_idx in connected_edge_indices[::2]: # because the
+                for bond_idx in connected_edge_indices[::2]:  # because the
                     # edge ordering is such that two directions of a single
                     # edge occur in pairs, so to get the unique undirected
                     # edge indices, we take every 2nd edge index from list
@@ -418,4 +423,3 @@ if __name__ == "__main__":
     # such that two directions of a single edge occur in pairs, so to get the
     # unique undirected edge indices, we take every 2nd edge index from list
     """
-

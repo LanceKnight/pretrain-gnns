@@ -18,6 +18,8 @@ from torch_geometric.data import Batch
 from itertools import repeat, product, chain
 from tqdm import tqdm
 
+from extra_utils import get_atom_rep
+
 
 # allowable node and edge features
 allowable_features = {
@@ -51,6 +53,10 @@ allowable_features = {
     ]
 }
 
+
+
+
+
 def mol_to_graph_data_obj_simple(mol):
     """
     Converts rdkit mol object to graph Data object required by the pytorch
@@ -63,11 +69,18 @@ def mol_to_graph_data_obj_simple(mol):
     num_atom_features = 2   # atom type,  chirality tag
     atom_features_list = []
     for atom in mol.GetAtoms():
-        atom_feature = [allowable_features['possible_atomic_num_list'].index(
-            atom.GetAtomicNum())] + [allowable_features[
-            'possible_chirality_list'].index(atom.GetChiralTag())]
+        h = get_atom_rep(atom.GetAtomicNum(), 'rdkit')
+        print(h)
+        atom_feature = get_atom_rep(atom.GetAtomicNum(), 'rdkit') + [allowable_features[
+             'possible_chirality_list'].index(atom.GetChiralTag())]
+
+        # atom_feature = [allowable_features['possible_atomic_num_list'].index(
+        #     atom.GetAtomicNum())] + [allowable_features[
+        #     'possible_chirality_list'].index(atom.GetChiralTag())]
         atom_features_list.append(atom_feature)
-    x = torch.tensor(np.array(atom_features_list), dtype=torch.long)
+    x = torch.tensor(np.array(atom_features_list), dtype=torch.float)
+
+
 
     # bonds
     num_bond_features = 2   # bond type, bond direction
@@ -310,7 +323,7 @@ class MoleculeDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return 'geometric_data_processed.pt'
+        return 'element_embedding_processed.pt'
 
     def download(self):
         raise NotImplementedError('Must indicate valid location of raw data. '
@@ -326,7 +339,7 @@ class MoleculeDataset(InMemoryDataset):
                                    dtype='str')
             smiles_list = list(input_df['smiles'])
             zinc_id_list = list(input_df['zinc_id'])
-            for i in range(len(smiles_list)):
+            for i in tqdm(range(len(smiles_list)), desc='processing progress'):
                 print(i)
                 s = smiles_list[i]
                 # each example contains a single species
@@ -594,7 +607,7 @@ class MoleculeDataset(InMemoryDataset):
         elif self.dataset == 'pcba':
             smiles_list, rdkit_mol_objs, labels = \
                 _load_pcba_dataset(self.raw_paths[0])
-            for i in range(len(smiles_list)):
+            for i in tqdm(range(len(smiles_list)),desc='processing progress'):
                 print(i)
                 rdkit_mol = rdkit_mol_objs[i]
                 # # convert aromatic bonds to double bonds
@@ -1171,7 +1184,7 @@ def _load_sider_dataset(input_path):
     labels = labels.replace(0, -1)
     assert len(smiles_list) == len(rdkit_mol_objs_list)
     assert len(smiles_list) == len(labels)
-    return smiles_list, rdkit_mol_objs_list, labels.value
+    return smiles_list, rdkit_mol_objs_list, labels.values
 
 def _load_toxcast_dataset(input_path):
     """
@@ -1350,8 +1363,20 @@ def create_all_datasets():
 
 # test MoleculeDataset object
 if __name__ == "__main__":
+    smi = 'C[C@@](F)([Cl])[Br]'
+    mol = Chem.MolFromSmiles(smi)
+    x = mol_to_graph_data_obj_simple(mol)
+    print(f'x:\n{x.x}')
+
+
     print('testing...')
-    a = MoleculeDataset(root = 'D:/Documents/JupyterNotebook/Hit_Explosion/data/lit-pcba/VAE/ADRB2', dataset = 'adrb2_vae')
-    print(a[0])
+    dataset = MoleculeDataset("dataset/sider", dataset='sider')
+    print(dataset[0])
+
+
+    
+
+    # a = MoleculeDataset(root = root+'VAE/ADRB2', dataset = 'adrb2_vae')
+    # print(a[0])
     #create_all_datasets()
 

@@ -160,15 +160,15 @@ def main():
         raise ValueError("Invalid dataset name.")
 
     # set up dataset
-    # MoleculeDataset("dataset/" + args.dataset, dataset=args.dataset)
-    dataset = MoleculeDataset(
-        "D:/Documents/JupyterNotebook/Hit_Explosion/data/lit-pcba/VAE/" + args.dataset.upper(), dataset=args.dataset)
+    dataset = MoleculeDataset("dataset/" + args.dataset, dataset=args.dataset)
+    # dataset = MoleculeDataset(
+    #     "D:/Documents/JupyterNotebook/Hit_Explosion/data/lit-pcba/VAE/" + args.dataset.upper(), dataset = args.dataset)
 
     print(dataset)
 
     if args.split == "scaffold":
         smiles_list = pd.read_csv(
-            "D:/Documents/JupyterNotebook/Hit_Explosion/data/lit-pcba/VAE/" + args.dataset.upper() + '/processed/smiles.csv', header=None)[0].tolist()
+            "dataset/" + args.dataset + '/processed/smiles.csv', header=None)[0].tolist()
         train_dataset, valid_dataset, test_dataset = scaffold_split(
             dataset, smiles_list, null_value=0, frac_train=0.8, frac_valid=0.1, frac_test=0.1)
         print("scaffold")
@@ -199,8 +199,9 @@ def main():
     model = GNN_graphpred(args.num_layer, args.emb_dim, num_tasks, JK=args.JK,
                           drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling, gnn_type=args.gnn_type)
 
-    for param in model.state_dict():
-        print(param)
+    # for param in model.state_dict():
+    #     print(param)
+
     if not args.input_model_file == "":
         model.from_pretrained(args.input_model_file)
 
@@ -217,7 +218,7 @@ def main():
         {"params": model.graph_pred_linear.parameters(), "lr": args.lr * args.lr_scale})
     optimizer = optim.Adam(model_param_group, lr=args.lr,
                            weight_decay=args.decay)
-    print(optimizer)
+    # print(optimizer)
 
     train_acc_list = []
     val_acc_list = []

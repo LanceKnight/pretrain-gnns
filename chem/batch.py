@@ -1,6 +1,7 @@
 import torch
 from torch_geometric.data import Data, Batch
 
+
 class BatchMasking(Data):
     r"""A plain old python object modeling a batch of graphs as one big
     (dicconnected) graph. With :class:`torch_geometric.data.Data` being the
@@ -38,17 +39,24 @@ class BatchMasking(Data):
                 item = data[key]
                 if key in ['edge_index', 'masked_atom_indices']:
                     item = item + cumsum_node
-                elif key  == 'connected_edge_indices':
+                elif key == 'connected_edge_indices':
                     item = item + cumsum_edge
                 batch[key].append(item)
 
             cumsum_node += num_nodes
             cumsum_edge += data.edge_index.shape[1]
-
+        # print()
+        # print(f'data_list:{data_list[0]}')
+        # print(f'keys:{keys}')  # , batch[key]:{batch[key]}')
+        # print(f'batch:{batch}')
+        i = 0
         for key in keys:
+            # print(f'i:{i}  key:{key}')
             batch[key] = torch.cat(
-                batch[key], dim=data_list[0].cat_dim(key, batch[key][0]))
+                batch[key], dim=data_list[0].__cat_dim__(key, batch[key][0]))
+            i += 1
         batch.batch = torch.cat(batch.batch, dim=-1)
+
         return batch.contiguous()
 
     def cumsum(self, key, item):
@@ -65,6 +73,7 @@ class BatchMasking(Data):
     def num_graphs(self):
         """Returns the number of graphs in the batch."""
         return self.batch[-1].item() + 1
+
 
 class BatchAE(Data):
     r"""A plain old python object modeling a batch of graphs as one big
@@ -147,14 +156,15 @@ class BatchSubstructContext(Data):
         #assert 'batch' not in keys
 
         batch = BatchSubstructContext()
-        keys = ["center_substruct_idx", "edge_attr_substruct", "edge_index_substruct", "x_substruct", "overlap_context_substruct_idx", "edge_attr_context", "edge_index_context", "x_context"]
+        keys = ["center_substruct_idx", "edge_attr_substruct", "edge_index_substruct", "x_substruct",
+                "overlap_context_substruct_idx", "edge_attr_context", "edge_index_context", "x_context"]
 
         for key in keys:
-            #print(key)
+            # print(key)
             batch[key] = []
 
         #batch.batch = []
-        #used for pooling the context
+        # used for pooling the context
         batch.batch_overlapped_context = []
         batch.overlapped_context_size = []
 
@@ -163,40 +173,43 @@ class BatchSubstructContext(Data):
         cumsum_context = 0
 
         i = 0
-        
+
         for data in data_list:
-            #If there is no context, just skip!!
+            # If there is no context, just skip!!
             if hasattr(data, "x_context"):
                 num_nodes = data.num_nodes
                 num_nodes_substruct = len(data.x_substruct)
                 num_nodes_context = len(data.x_context)
 
                 #batch.batch.append(torch.full((num_nodes, ), i, dtype=torch.long))
-                batch.batch_overlapped_context.append(torch.full((len(data.overlap_context_substruct_idx), ), i, dtype=torch.long))
-                batch.overlapped_context_size.append(len(data.overlap_context_substruct_idx))
+                batch.batch_overlapped_context.append(torch.full(
+                    (len(data.overlap_context_substruct_idx), ), i, dtype=torch.long))
+                batch.overlapped_context_size.append(
+                    len(data.overlap_context_substruct_idx))
 
-                ###batching for the main graph
-                #for key in data.keys:
+                # batching for the main graph
+                # for key in data.keys:
                 #    if not "context" in key and not "substruct" in key:
                 #        item = data[key]
                 #        item = item + cumsum_main if batch.cumsum(key, item) else item
                 #        batch[key].append(item)
-                
-                ###batching for the substructure graph
+
+                # batching for the substructure graph
                 for key in ["center_substruct_idx", "edge_attr_substruct", "edge_index_substruct", "x_substruct"]:
                     item = data[key]
-                    item = item + cumsum_substruct if batch.cumsum(key, item) else item
+                    item = item + \
+                        cumsum_substruct if batch.cumsum(key, item) else item
                     batch[key].append(item)
-                
 
-                ###batching for the context graph
+                # batching for the context graph
                 for key in ["overlap_context_substruct_idx", "edge_attr_context", "edge_index_context", "x_context"]:
                     item = data[key]
-                    item = item + cumsum_context if batch.cumsum(key, item) else item
+                    item = item + \
+                        cumsum_context if batch.cumsum(key, item) else item
                     batch[key].append(item)
 
                 cumsum_main += num_nodes
-                cumsum_substruct += num_nodes_substruct   
+                cumsum_substruct += num_nodes_substruct
                 cumsum_context += num_nodes_context
                 i += 1
 
@@ -204,8 +217,10 @@ class BatchSubstructContext(Data):
             batch[key] = torch.cat(
                 batch[key], dim=batch.cat_dim(key))
         #batch.batch = torch.cat(batch.batch, dim=-1)
-        batch.batch_overlapped_context = torch.cat(batch.batch_overlapped_context, dim=-1)
-        batch.overlapped_context_size = torch.LongTensor(batch.overlapped_context_size)
+        batch.batch_overlapped_context = torch.cat(
+            batch.batch_overlapped_context, dim=-1)
+        batch.overlapped_context_size = torch.LongTensor(
+            batch.overlapped_context_size)
 
         return batch.contiguous()
 

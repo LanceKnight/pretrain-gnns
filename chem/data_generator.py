@@ -1,7 +1,115 @@
 from rdkit import Chem
+from rdkit.Chem import AllChem
+from rdkit.Chem.rdmolops import AddHs
+from rdkit.Chem.Descriptors import ExactMolWt
 from rdkit.Chem import rdmolops
-from torch_geometric import InMemoryDataset
+from torch_geometric.data import InMemoryDataset
+from torch_geometric.data import Data
+import os
+import torch
+import pandas as pd
+from tqdm import tqdm
+import numpy as np
 
+from extra_utils import get_atom_rep
+
+allowable_features = {
+    'possible_chirality_list': [
+        Chem.rdchem.ChiralType.CHI_UNSPECIFIED,
+        Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CW,
+        Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CCW,
+        Chem.rdchem.ChiralType.CHI_OTHER
+    ],
+    'possible_bonds': [
+        Chem.rdchem.BondType.SINGLE,
+        Chem.rdchem.BondType.DOUBLE,
+        Chem.rdchem.BondType.TRIPLE,
+        Chem.rdchem.BondType.AROMATIC
+    ],
+    'possible_bond_dirs': [  # only for double bond stereo information
+        Chem.rdchem.BondDir.NONE,
+        Chem.rdchem.BondDir.ENDUPRIGHT,
+        Chem.rdchem.BondDir.ENDDOWNRIGHT
+    ]
+
+
+}
+
+
+def graph_from_mol(mol, **kwargv):
+    """
+    Converts rdkit mol object to graph Data object required by the pytorch
+    geometric package. NB: Uses simplified atom and bond features, and represent
+    as indices
+    :param mol: rdkit mol object
+    :return: graph data object with the attributes: x, edge_index, edge_attr
+    """
+    # atoms
+
+    num_atom_features = 2   # atom type,  chirality tag
+    atom_features_list = []
+    for atom in mol.GetAtoms():
+        h = get_atom_rep(atom.GetAtomicNum(), 'rdkit')
+        # print(h)
+
+        atom_feature = get_atom_rep(atom.GetAtomicNum(
+        ), 'rdkit') + [allowable_features['possible_chirality_list'].index(atom.GetChiralTag())]
+
+        # atom_feature = [allowable_features['possible_atomic_num_list'].index(
+        #     atom.GetAtomicNum())] + [allowable_features[
+        #     'possible_chirality_list'].index(atom.GetChiralTag())]
+        atom_features_list.append(atom_feature)
+    x = torch.tensor(np.array(atom_features_list), dtype=torch.float)
+
+    # bonds
+    num_bond_features = 2   # bond type, bond direction
+    if len(mol.GetBonds()) > 0:  # mol has bonds
+        edges_list = []
+        edge_features_list = []
+        for bond in mol.GetBonds():
+            i = bond.GetBeginAtomIdx()
+            j = bond.GetEndAtomIdx()
+            edge_feature = [allowable_features['possible_bonds'].index(
+                bond.GetBondType())] + [allowable_features[
+                    'possible_bond_dirs'].index(
+                    bond.GetBondDir())]
+            edges_list.append((i, j))
+            edge_features_list.append(edge_feature)
+            edges_list.append((j, i))
+            edge_features_list.append(edge_feature)
+
+        # data.edge_index: Graph connectivity in COO format with shape [2, num_edges]
+        edge_index = torch.tensor(np.array(edges_list).T, dtype=torch.long)
+
+        # data.edge_attr: Edge feature matrix with shape [num_edges, num_edge_features]
+        edge_attr = torch.tensor(np.array(edge_features_list),
+                                 dtype=torch.long)
+    else:   # mol has no bonds
+        edge_index = torch.empty((2, 0), dtype=torch.long)
+        edge_attr = torch.empty((0, num_bond_features), dtype=torch.long)
+
+    AllChem.EmbedMolecule(mol)
+    try:
+        volume = AllChem.ComputeMolVolume(mol)
+    except:
+        print(f'cannot get volume, smiles:{Chem.MolToSmiles(mol)}')
+        return None
+
+    if kwargv['smiles'] is not None:
+        smiles = kwargv['smiles']
+    else:
+        smiles = Chem.MolToSmiles(mol)
+
+    if kwargv['weight'] is not None:
+        weight = kwargv['weight']
+    else:
+        weight = Chem.Descriptors.ExactMolWt(mol)
+    weight = torch.tensor(weight)
+
+    data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr,
+                volume=volume, weight=weight, smiles=smiles)
+
+    return data
 
 # elements = ['H', 'C', 'N', 'O', 'P', 'S', 'F', 'Cl', 'Br', 'I']
 # bonds = ['-', '=', '#']
@@ -67,11 +175,22 @@ from torch_geometric import InMemoryDataset
 
 #     return molecule_lst
 
+class weight_filter():
+    def __call__(self, mol, std_w):
+        w = Chem.Descriptors.ExactMolWt(mol)
+        if w < self.std_w:
+            return True
+        else:
+            return False
+
+
 class MoleculeDataset(InMemoryDataset):
     def __init__(self,
                  root,
-                 #data = None,
-                 #slices = None,
+                 # data = None,
+                 # slices = None,
+                 # cannot use range(0,20), it will generate a range between (0,1) instead of (0,20)
+                 molecular_weight=(0, 20),
                  transform=None,
                  pre_transform=None,
                  pre_filter=None,
@@ -90,6 +209,9 @@ class MoleculeDataset(InMemoryDataset):
         """
         self.dataset = dataset
         self.root = root
+
+        # do not process molecules outside this weight range
+        self.w_range = molecular_weight
 
         super(MoleculeDataset, self).__init__(root, transform, pre_transform,
                                               pre_filter)
@@ -117,7 +239,7 @@ class MoleculeDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return 'geometric_data_processed.pt'
+        return f'processed_pcba_{self.w_range}.pt'
 
     def download(self):
         raise NotImplementedError('Must indicate valid location of raw data. '
@@ -127,10 +249,41 @@ class MoleculeDataset(InMemoryDataset):
         data_smiles_list = []
         data_list = []
 
+        file_path = os.path.join(self.root, 'raw', 'pcba.csv')
+        smiles_list = pd.read_csv(file_path)['smiles']
+        for smi in tqdm(smiles_list, desc='data processing progress'):
+            if '.' in smi:
+                continue
+
+            mol = Chem.MolFromSmiles(smi)
+            mol = AddHs(mol)
+            w = ExactMolWt(mol)
+
+            if self.w_range[0] < w < self.w_range[1]:
+                # print(
+                #     f'w:{w} range[0]:{self.w_range[0]}, range[0]:{self.w_range[1]},condition:{self.w_range[0] < w < self.w_range[1]}')
+                data = graph_from_mol(mol, weight=w, smiles=smi)
+
+                if data is not None:
+                    data_list.append(data)
+
+        if(len(data_list) > 0):
+            print('database size:{len(data_list)}')
+            data, slices = self.collate(data_list)
+            torch.save((data, slices), self.processed_paths[0])
+        else:
+            print('empty data')
+
 
 if __name__ == '__main__':
     print('testing')
-    dataset = MoleculeDataset()
+
+    for a in range(0, 1000, 50):
+
+        w_range = (a, a + 50)
+        print(f'range:{w_range}')
+        dataset = MoleculeDataset(
+            root='dataset/pcba', molecular_weight=w_range)
     # lst = generate_molecule_list(3)
     # print(f'data size:{len(lst)}')
     # for smi in lst:
