@@ -58,7 +58,7 @@ def eval(args, model, device, loader):
         batch = batch.to(device)
 
         with torch.no_grad():
-            pred = model(batch.x, batch.edge_index,
+            pred, h = model(batch.x, batch.edge_index,
                          batch.edge_attr, batch.batch)
 
         y_true.append(batch.y.view(pred.shape))
