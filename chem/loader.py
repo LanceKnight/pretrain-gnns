@@ -6,15 +6,19 @@ import math
 import pandas as pd
 import numpy as np
 import networkx as nx
+
 from rdkit import Chem
 from rdkit.Chem import Descriptors
 from rdkit.Chem import AllChem
 from rdkit import DataStructs
 from rdkit.Chem.rdMolDescriptors import GetMorganFingerprintAsBitVect
+from rdkit.Chem.rdchem import Conformer
+
 from torch.utils import data
 from torch_geometric.data import Data
 from torch_geometric.data import InMemoryDataset
 from torch_geometric.data import Batch
+from torch_geometric.utils import degree
 from itertools import repeat, product, chain
 
 
@@ -49,6 +53,71 @@ allowable_features = {
         Chem.rdchem.BondDir.ENDDOWNRIGHT
     ]
 }
+
+def mol_to_graph_data(mol):
+    """
+    Converts rdkit mol object to graph Data object required by the pytorch
+    geometric package. NB: Uses simplified atom and bond features, and represent
+    as indices
+    :param mol: rdkit mol object
+    :return: graph data object with the attributes: x, edge_index, edge_attr
+    """
+    # atoms
+    mol = Chem.AddHs(mol)
+    AllChem.EmbedMolecule(mol)
+    AllChem.UFFOptimizeMolecule(mol)
+    mol = Chem.RemoveHs(mol)
+
+    conf = mol.GetConformer()
+
+    num_atom_features = 2   # atom type,  chirality tag
+    atom_features_list = []
+    position_list = []
+    for i, atom in enumerate(mol.GetAtoms()):
+        atom_feature = [allowable_features['possible_atomic_num_list'].index(
+            atom.GetAtomicNum())] + [allowable_features[
+            'possible_chirality_list'].index(atom.GetChiralTag())]
+        atom_features_list.append(atom_feature)
+        position = Conformer.GetAtomPosition(conf, i)
+        position_list.append([position.x, position.y, position.z])
+    x = torch.tensor(np.array(atom_features_list), dtype=torch.long, requires_grad = False)
+    pos_matrix = torch.tensor(position_list, requires_grad = False)
+
+
+    # bonds
+    num_bond_features = 2   # bond type, bond direction
+    if len(mol.GetBonds()) > 0: # mol has bonds
+        edges_list = []
+        edge_features_list = []
+        for bond in mol.GetBonds():
+            i = bond.GetBeginAtomIdx()
+            j = bond.GetEndAtomIdx()
+            edge_feature = [allowable_features['possible_bonds'].index(
+                bond.GetBondType())] + [allowable_features[
+                                            'possible_bond_dirs'].index(
+                bond.GetBondDir())]
+            edges_list.append((i, j))
+            edge_features_list.append(edge_feature)
+            edges_list.append((j, i))
+            edge_features_list.append(edge_feature)
+
+        # data.edge_index: Graph connectivity in COO format with shape [2, num_edges]
+        edge_index = torch.tensor(np.array(edges_list).T, dtype=torch.long)
+
+        # data.edge_attr: Edge feature matrix with shape [num_edges, num_edge_features]
+        edge_attr = torch.tensor(np.array(edge_features_list),
+                                 dtype=torch.long)
+    else:   # mol has no bonds
+        edge_index = torch.empty((2, 0), dtype=torch.long)
+        edge_attr = torch.empty((0, num_bond_features), dtype=torch.long)
+
+    num_nodes = x.shape[0]
+    deg = degree(edge_index[0], num_nodes)
+
+    data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, pos_matrix = pos_matrix, deg = deg)
+
+    return data
+
 
 def mol_to_graph_data_obj_simple(mol):
     """
