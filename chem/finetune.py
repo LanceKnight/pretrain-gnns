@@ -23,6 +23,8 @@ import shutil
 from tensorboardX import SummaryWriter
 
 criterion = nn.BCEWithLogitsLoss(reduction="none")
+criterion = nn.BCELoss()
+# criterion = nn.MSELoss()
 
 
 def train(args, model, device, loader, optimizer):
@@ -30,31 +32,30 @@ def train(args, model, device, loader, optimizer):
 
     for step, batch in enumerate(tqdm(loader, desc="Iteration")):
         # batch = batch.to(device)
-        print(f'device:{device}')
+
         batch.x = batch.x.to(device)
         batch.p = batch.p.to(device)
         batch.edge_index = batch.edge_index.to(device)
         batch.edge_attr = batch.edge_attr.to(device)
         batch.batch = batch.batch.to(device)
-        model.to(device)
-        print(f'batch.x:{batch.x}')
-        print(f'batch.p:{batch.p}')
-        print(f'batch.edge_index:{batch.edge_index}')
-        print(f'batch.edge_attr:{batch.edge_attr}')
-        print(f'batch:{batch.batch}')
+
         batch = batch.to(device)
-        print(f'model device cuda: {next(model.parameters()).is_cuda}')
+
         pred, h = model(batch.x, batch.p, batch.edge_index,
                         batch.edge_attr, batch.batch)
         y = batch.y.view(pred.shape).to(torch.float64)
+        print(f'pred:{pred}')
+        print(f'y:{y}')
 
         # Whether y is non-null or not.
         is_valid = y**2 > 0
+        print(f'is_valid:{is_valid}')
         # Loss matrix
         loss_mat = criterion(pred.double(), (y + 1) / 2)
+        print(f'loss:{loss_mat}')
         # loss matrix after removing null target
-        loss_mat = torch.where(is_valid, loss_mat, torch.zeros(
-            loss_mat.shape).to(loss_mat.device).to(loss_mat.dtype))
+        # loss_mat = torch.where(is_valid, loss_mat, torch.zeros(
+        #     loss_mat.shape).to(loss_mat.device).to(loss_mat.dtype))
 
         optimizer.zero_grad()
         loss = torch.sum(loss_mat) / torch.sum(is_valid)
@@ -72,11 +73,13 @@ def eval(args, model, device, loader):
         batch = batch.to(device)
 
         with torch.no_grad():
-            pred = model(batch.x, batch.edge_index,
-                         batch.edge_attr, batch.batch)
+            pred, h = model(batch.x, batch.p, batch.edge_index,
+                            batch.edge_attr, batch.batch)
 
         y_true.append(batch.y.view(pred.shape))
         y_scores.append(pred)
+        print(f'y_true:{y_true}')
+        print(f'y_scores:{y_scores}')
 
     y_true = torch.cat(y_true, dim=0).cpu().numpy()
     y_scores = torch.cat(y_scores, dim=0).cpu().numpy()
@@ -86,9 +89,12 @@ def eval(args, model, device, loader):
         # AUC is only defined when there is at least one positive data.
         if np.sum(y_true[:, i] == 1) > 0 and np.sum(y_true[:, i] == -1) > 0:
             is_valid = y_true[:, i]**2 > 0
-            roc_list.append(roc_auc_score(
-                (y_true[is_valid, i] + 1) / 2, y_scores[is_valid, i]))
-
+            # roc_list.append(roc_auc_score(
+            #     (y_true[is_valid, i] + 1) / 2, y_scores[is_valid, i]))
+            roc = roc_auc_score(
+                (y_true + 1) / 2, y_scores)
+            print(f'roc:{roc}')
+            roc_list.append(roc)
     if len(roc_list) < y_true.shape[1]:
         print("Some target is missing!")
         print("Missing ratio: %f" %
@@ -170,16 +176,21 @@ def main():
         num_tasks = 2
     elif args.dataset == "adrb2":
         num_tasks = 1
+    elif args.dataset == "aldh1":
+        num_tasks = 1
     else:
         raise ValueError("Invalid dataset name.")
 
     # set up dataset
     # MoleculeDataset("dataset/" + args.dataset, dataset=args.dataset)
     dataset = MoleculeDataset(
-        D=2, root='~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/lit-pcba/AVE/ADRB2', dataset='adrb2_vae')
+        D=2, root='~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/lit-pcba/AVE/' + args.dataset.upper(), dataset=args.dataset + '_vae')
 
     print(dataset)
-    # dataset = dataset[:1000]
+    dataset = dataset[0:70]
+    # all_y = torch.tensor([data.y for data in dataset])
+    # pos = torch.count_nonzero(all_y)
+    # print(f'numboer of positive samples:{pos}')
 
     if args.split == "scaffold":
         smiles_list = pd.read_csv(
@@ -203,6 +214,18 @@ def main():
     else:
         raise ValueError("Invalid split option.")
 
+    all_train_y = torch.tensor([data.y for data in train_dataset])
+    all_valid_y = torch.tensor([data.y for data in valid_dataset])
+    all_test_y = torch.tensor([data.y for data in test_dataset])
+    train_pos = torch.count_nonzero(all_train_y)
+    valid_pos = torch.count_nonzero(all_valid_y)
+    test_pos = torch.count_nonzero(all_test_y)
+    print(
+        f'train- num positive samples:{train_pos}, total:{len(train_dataset)}')
+    print(
+        f'valid- num positive samples:{valid_pos}, total:{len(valid_dataset)}')
+    print(f'test- num positive samples:{test_pos}, total:{len(test_dataset)}')
+
     print(train_dataset[0])
 
     print('loading data')
@@ -214,7 +237,7 @@ def main():
                              shuffle=False, num_workers=args.num_workers)
     print('data loaded!')
     # set up model
-    model = GNN_graphpred(num_layers=5, num_kernel_layers=100, x_dim=5, p_dim=3, edge_attr_dim=1, num_tasks=num_tasks, JK=args.JK,
+    model = GNN_graphpred(num_layers=5, num_kernel_layers=10, x_dim=5, p_dim=3, edge_attr_dim=1, num_tasks=num_tasks, JK=args.JK,
                           drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling)
 
     # for param in model.state_dict():
@@ -223,7 +246,7 @@ def main():
         model.from_pretrained(args.input_model_file)
 
     model = model.to(device)
-    print(f'model device cuda:{next(model.parameters()).is_cuda}')
+    # print(f'model device cuda:{next(model.parameters()).is_cuda}')
 
     # set up optimizer
     # different learning rate for different part of GNN

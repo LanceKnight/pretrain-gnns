@@ -226,6 +226,33 @@ class MoleculeDataset(InMemoryDataset):
                     # print(data)
                     data_list.append(data)
                     data_smiles_list.append(smiles_list[i])
+
+        elif self.dataset == 'aldh1_vae':
+            smiles_lists = []
+            data_list = []
+            data_smiles_list = []
+
+            for file, label, type_ in [('AID1030_active_T.smi', 1, 'train'),
+                                       ('AID1030_active_V.smi', 1, 'val'),
+                                       ('AID1030_inactive_T.smi', 0, 'train'),
+                                       ('AID1030_inactive_V.smi', 0, 'val')]:
+                smiles_path = os.path.join(self.root, 'raw', file)
+                smiles_list = pd.read_csv(smiles_path, sep=' ', header=None)[0]
+                # labels = [label]* len(smiles_list)
+                # types = [type_] * len(smiles_list)
+
+                for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
+                    smi = smiles_list[i]
+
+                    data = smiles2graph(2, smi)
+                    data.id = torch.tensor([i])
+                    data.y = torch.tensor([label])
+                    data.type = type_
+                    data.smiles = smi
+                    # print(data)
+                    data_list.append(data)
+                    data_smiles_list.append(smiles_list[i])
+
         else:
             raise ValueError('Invalid dataset name')
 
@@ -444,12 +471,12 @@ class MoleculeFingerprintDataset(data.Dataset):
 if __name__ == "__main__":
     print('testing...')
     a = MoleculeDataset(
-        D=2, root='~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/lit-pcba/AVE/ADRB2', dataset='adrb2_vae')
-    print(a[0])
+        D=2, root='~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/lit-pcba/AVE/ALDH1', dataset='aldh1_vae')
+    print(len(a))
 
     data = a[0]
-    print(data.x)
-    print(data.p)
-    print(data.edge_index)
-    print(data.edge_attr)
+    # print(data.x)
+    # print(data.p)
+    # print(data.edge_index)
+    # print(data.edge_attr)
     # create_all_datasets()
