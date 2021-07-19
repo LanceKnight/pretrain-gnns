@@ -129,7 +129,7 @@ class GNN_graphpred(torch.nn.Module):
         # self.gnn = GNN(self.num_layer, self.emb_dim, JK = self.JK, drop_ratio = self.drop_ratio)
         self.gnn.load_state_dict(torch.load(model_file))
 
-    def save(self, path):
+    def save_kernellayer(self, path):
         layers = self.gnn.layers
         print(f'{self.D}D, there are {len(layers)} layers')
         for i, layer in enumerate(layers):
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     #     out = model(batch)
     #     print(out)
 
-    model.save('saved_models')
+    model.save('saved_kernellayers')
 
     # data = dataset[2]
     # model(data=data)

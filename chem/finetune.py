@@ -208,7 +208,7 @@ def main():
 
     dataset = MoleculeDataset(D=D, root=root, dataset=dataset)
     print(dataset[0])
-    index = list(range(400)) + list(range(1000, 1400))
+    index = list(range(40)) + list(range(1000, 1040))
     dataset = dataset[index]
     print(dataset)
 
@@ -314,7 +314,9 @@ def main():
 
     if not args.filename == "":
         writer.close()
-    torch.save(model.state_dict(), "output/trained_model.pth")
+
+    model.save_kernellayer('saved_kernellayers')
+    torch.save(model.state_dict(), "saved_models/trained_model.pth")
 
 
 if __name__ == "__main__":
