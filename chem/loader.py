@@ -115,8 +115,7 @@ def smiles2graph(D, smiles):
         atomic_num = atom.GetAtomicNum()
         h = get_atom_rep(atomic_num)
 
-        # , conf.GetAtomPosition(i).z])
-        atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y])
+        atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y], conf.GetAtomPosition(i).z]))
         atom_attr.append(h)
 
     # get bond attributes
