@@ -115,7 +115,10 @@ def smiles2graph(D, smiles):
         atomic_num = atom.GetAtomicNum()
         h = get_atom_rep(atomic_num)
 
-        atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z])
+        if D == 2:
+            atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y])
+        elif D == 3:
+            atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z])
         atom_attr.append(h)
 
     # get bond attributes
@@ -304,14 +307,14 @@ class SDFBenchmakr2015(InMemoryDataset):
         if not empty:
             self.data, self.slices = torch.load(self.processed_paths[0])
 
-    @property
+    @ property
     def raw_file_names(self):
         file_name_list = os.listdir(self.raw_dir)
         # assert len(file_name_list) == 1     # currently assume we have a
         # # single raw file
         return file_name_list
 
-    @property
+    @ property
     def processed_file_names(self):
         return f'geometric_data_processed-{self.D}D.pt'
 
