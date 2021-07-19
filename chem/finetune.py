@@ -35,11 +35,7 @@ def train(args, model, device, loader, optimizer):
 
     loss_lst = []
     for step, batch in enumerate(tqdm(loader, desc="Iteration")):
-        # batch = batch.to(device)
-        # batch.x = batch.x.to(device)
-        # batch.p = batch.p.to(device)
-        # batch.edge_index = batch.edge_index.to(device)
-        # batch.edge_attr = batch.edge_attr.to(device)
+
         batch.batch = batch.batch.to(device)
 
         batch = batch.to(device)
@@ -48,16 +44,13 @@ def train(args, model, device, loader, optimizer):
                         batch.edge_attr, batch.batch)
         y = batch.y.view(pred.shape).to(torch.float64)
 
-        # Whether y is non-null or not.
-        # is_valid = y**2 > 0
-        # Loss matrix
-        # print(f"pred:{pred.double()}, y:{y}")
-        loss = criterion(pred.double(), y)
-        # loss_mat = criterion(pred.double(), (y + 1) / 2)
-        # loss matrix after removing null target
-        # loss_mat = torch.where(is_valid, loss_mat, torch.zeros(
-        #     loss_mat.shape).to(loss_mat.device).to(loss_mat.dtype))
-        # print(f'loss:{loss}')
+        print('pred:')
+        print(pred)
+        print('y:')
+        print(y)
+
+        loss = criterion(pred, y)
+
         loss_lst.append(loss)
         optimizer.zero_grad()
         # loss = torch.sum(loss_mat) / torch.sum(is_valid)
@@ -116,7 +109,7 @@ def main():
 
     # task = Task.init(project_name="kernel GNN", task_name="out-of-memory")
 
-    # Training settings
+    # ==========settings==========
     parser = argparse.ArgumentParser(
         description='PyTorch implementation of pre-training of graph neural networks')
     parser.add_argument('--device', type=int, default=0,
@@ -159,13 +152,14 @@ def main():
                         help='number of workers for dataset loading')
     args = parser.parse_args()
 
+    # ==========seeds==========
     torch.manual_seed(args.runseed)
     np.random.seed(args.runseed)
     device = torch.device("cuda:" + str(args.device)) if torch.cuda.is_available() else torch.device("cpu")
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.runseed)
 
-    # set up dataset
+    # ==========set up dataset==========
     # windows
     # root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
     # linux
@@ -181,10 +175,11 @@ def main():
 
     dataset = MoleculeDataset(D=D, root=root, dataset=dataset)
     print(dataset[0])
-    index = list(range(40)) + list(range(1000, 1040))
+    index = list(range(400)) + list(range(1000, 1400))
     dataset = dataset[index]
     print(dataset)
 
+    # ==========splitting datasets==========
     if args.split == "scaffold":
         smiles_list = pd.read_csv(
             "D:/Documents/JupyterNotebook/Hit_Explosion/data/lit-pcba/VAE/" + args.dataset.upper() + '/processed/smiles.csv', header=None)[0].tolist()
@@ -222,21 +217,19 @@ def main():
     test_loader = DataLoader(test_dataset, batch_size=len(
         test_dataset), shuffle=False, num_workers=args.num_workers)
     print('data loaded!')
-    # set up model
 
+    # ==========set up model==========
     model = GNN_graphpred(num_layers=args.num_layers, num_kernelsets=args.num_kernelsets, x_dim=5, p_dim=D,
                           edge_attr_dim=1, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling)
-
     # check model size
-    print_model_size(model)
+    # print_model_size(model)
 
     if not args.input_model_file == "":
         model.from_pretrained(args.input_model_file)
 
     model = model.to(device)
-    # print(f'model device cuda:{next(model.parameters()).is_cuda}')
 
-    # set up optimizer
+    # ==========set up optimizer==========
     # different learning rate for different part of GNN
     model_param_group = []
     model_param_group.append({"params": model.gnn.parameters()})
@@ -259,6 +252,7 @@ def main():
             print("removed the existing file.")
         writer = SummaryWriter(fname)
 
+    # ==========training and evaluation==========
     for epoch in range(1, args.epochs + 1):
         print("====epoch " + str(epoch))
 
@@ -270,19 +264,19 @@ def main():
         else:
             print("omit the training accuracy computation")
             train_acc = 0
-        val_acc = eval(args, model, device, val_loader)
-        test_acc = eval(args, model, device, test_loader)
+        # val_acc = eval(args, model, device, val_loader)
+        # test_acc = eval(args, model, device, test_loader)
 
-        print("train: %f val: %f test: %f" % (train_acc, val_acc, test_acc))
+        # print("train: %f val: %f test: %f" % (train_acc, val_acc, test_acc))
 
-        val_acc_list.append(val_acc)
-        test_acc_list.append(test_acc)
-        train_acc_list.append(train_acc)
+        # val_acc_list.append(val_acc)
+        # test_acc_list.append(test_acc)
+        # train_acc_list.append(train_acc)
 
-        if not args.filename == "":
-            writer.add_scalar('data/train auc', train_acc, epoch)
-            writer.add_scalar('data/val auc', val_acc, epoch)
-            writer.add_scalar('data/test auc', test_acc, epoch)
+        # if not args.filename == "":
+        #     writer.add_scalar('data/train auc', train_acc, epoch)
+        #     writer.add_scalar('data/val auc', val_acc, epoch)
+        #     writer.add_scalar('data/test auc', test_acc, epoch)
 
         print("")
 
