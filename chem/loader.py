@@ -115,26 +115,29 @@ def smiles2graph(D, smiles):
         atomic_num = atom.GetAtomicNum()
         h = get_atom_rep(atomic_num)
 
-        atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z])
+        if D == 2:
+            atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y)
+        elif D == 3:
+            atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z])
         atom_attr.append(h)
 
     # get bond attributes
-    edge_list = []
-    edge_attr_list = []
+    edge_list= []
+    edge_attr_list= []
     for idx, edge in enumerate(mol.GetBonds()):
-        i = edge.GetBeginAtomIdx()
-        j = edge.GetEndAtomIdx()
+        i= edge.GetBeginAtomIdx()
+        j= edge.GetEndAtomIdx()
 
-        bond_attr = None
-        bond_type = edge.GetBondType()
+        bond_attr= None
+        bond_type= edge.GetBondType()
         if bond_type == Chem.rdchem.BondType.SINGLE:
-            bond_attr = [1]
+            bond_attr= [1]
         elif bond_type == Chem.rdchem.BondType.DOUBLE:
-            bond_attr = [2]
+            bond_attr= [2]
         elif bond_type == Chem.rdchem.BondType.TRIPLE:
-            bond_attr = [3]
+            bond_attr= [3]
         elif bond_type == Chem.rdchem.BondType.AROMATIC:
-            bond_attr = [4]
+            bond_attr= [4]
 
         edge_list.append((i, j))
         edge_attr_list.append(bond_attr)
@@ -144,12 +147,12 @@ def smiles2graph(D, smiles):
         edge_attr_list.append(bond_attr)
 #         print(f'j:{j} j:{i} bond_attr:{bond_attr}')
 
-    x = torch.tensor(atom_attr)
-    p = torch.tensor(atom_pos)
-    edge_index = torch.tensor(edge_list).t().contiguous()
-    edge_attr = torch.tensor(edge_attr_list)
+    x= torch.tensor(atom_attr)
+    p= torch.tensor(atom_pos)
+    edge_index= torch.tensor(edge_list).t().contiguous()
+    edge_attr= torch.tensor(edge_attr_list)
 
-    data = Data(x=x, p=p, edge_index=edge_index, edge_attr=edge_attr)
+    data= Data(x=x, p=p, edge_index=edge_index, edge_attr=edge_attr)
     return data
 
 
@@ -178,15 +181,15 @@ class MoleculeDataset(InMemoryDataset):
         :param empty: if True, then will not load any data obj. For
         initializing empty dataset
         """
-        self.dataset = dataset
-        self.root = root
-        self.D = D
+        self.dataset= dataset
+        self.root= root
+        self.D= D
         super(MoleculeDataset, self).__init__(root, transform, pre_transform,
                                               pre_filter)
-        self.transform, self.pre_transform, self.pre_filter = transform, pre_transform, pre_filter
+        self.transform, self.pre_transform, self.pre_filter= transform, pre_transform, pre_filter
 
         if not empty:
-            self.data, self.slices = torch.load(self.processed_paths[0])
+            self.data, self.slices= torch.load(self.processed_paths[0])
 
     # def get(self, idx):
     #     data = Data()
@@ -200,7 +203,7 @@ class MoleculeDataset(InMemoryDataset):
 
     @ property
     def raw_file_names(self):
-        file_name_list = os.listdir(self.raw_dir)
+        file_name_list= os.listdir(self.raw_dir)
         # assert len(file_name_list) == 1     # currently assume we have a
         # # single raw file
         return file_name_list
@@ -214,50 +217,50 @@ class MoleculeDataset(InMemoryDataset):
                                   'No download allowed')
 
     def process(self):
-        data_smiles_list = []
-        data_list = []
+        data_smiles_list= []
+        data_list= []
 
         if self.dataset == 'adrb2_vae':
-            smiles_lists = []
-            data_list = []
-            data_smiles_list = []
+            smiles_lists= []
+            data_list= []
+            data_smiles_list= []
 
             for file, label, type_ in [('AID492947_active_T.smi', 1, 'train'),
                                        ('AID492947_active_V.smi', 1, 'val'),
                                        ('AID492947_inactive_T.smi', 0, 'train'),
                                        ('AID492947_inactive_V.smi', 0, 'val')]:
-                smiles_path = os.path.join(self.root, 'raw', file)
-                smiles_list = pd.read_csv(smiles_path, sep=' ', header=None)[0]
+                smiles_path= os.path.join(self.root, 'raw', file)
+                smiles_list= pd.read_csv(smiles_path, sep=' ', header=None)[0]
                 # labels = [label]* len(smiles_list)
                 # types = [type_] * len(smiles_list)
 
                 for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
-                    smi = smiles_list[i]
+                    smi= smiles_list[i]
 
-                    data = smiles2graph(2, smi)
-                    data.id = torch.tensor([i])
-                    data.y = torch.tensor([label])
-                    data.type = type_
-                    data.smiles = smi
+                    data= smiles2graph(2, smi)
+                    data.id= torch.tensor([i])
+                    data.y= torch.tensor([label])
+                    data.type= type_
+                    data.smiles= smi
                     # print(data)
                     data_list.append(data)
                     data_smiles_list.append(smiles_list[i])
         elif self.dataset == '435008':
             for file, label in [(f'{self.dataset}_actives.smi', 1),
                                 (f'{self.dataset}_inactives.smi', 0)]:
-                smiles_path = os.path.join(self.root, 'raw', file)
-                smiles_list = pd.read_csv(
+                smiles_path= os.path.join(self.root, 'raw', file)
+                smiles_list= pd.read_csv(
                     smiles_path, sep='\t', header=None)[0]
 
                 for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
-                    smi = smiles_list[i]
+                    smi= smiles_list[i]
 
-                    data = smiles2graph(2, smi)
+                    data= smiles2graph(2, smi)
                     if data is None:
                         continue
-                    data.id = torch.tensor([i])
-                    data.y = torch.tensor([label])
-                    data.smiles = smi
+                    data.id= torch.tensor([i])
+                    data.y= torch.tensor([label])
+                    data.smiles= smi
                     # print(data)
                     data_list.append(data)
                     data_smiles_list.append(smiles_list[i])
@@ -266,18 +269,18 @@ class MoleculeDataset(InMemoryDataset):
             raise ValueError('Invalid dataset name')
 
         if self.pre_filter is not None:
-            data_list = [data for data in data_list if self.pre_filter(data)]
+            data_list= [data for data in data_list if self.pre_filter(data)]
 
         if self.pre_transform is not None:
-            data_list = [self.pre_transform(data) for data in data_list]
+            data_list= [self.pre_transform(data) for data in data_list]
 
         # write data_smiles_list in processed paths
-        data_smiles_series = pd.Series(data_smiles_list)
+        data_smiles_series= pd.Series(data_smiles_list)
         data_smiles_series.to_csv(os.path.join(self.processed_dir,
                                                'smiles.csv'), index=False,
                                   header=False)
 
-        data, slices = self.collate(data_list)
+        data, slices= self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
 # NB: only properly tested when dataset_1 is chembl_with_labels and dataset_2
@@ -294,24 +297,24 @@ class SDFBenchmakr2015(InMemoryDataset):
                  dataset='435008',
                  empty=False):
 
-        self.dataset = dataset
-        self.root = root
-        self.D = D
+        self.dataset= dataset
+        self.root= root
+        self.D= D
         super(SDFBenchmakr2015, self).__init__(root, transform, pre_transform,
                                                pre_filter)
-        self.transform, self.pre_transform, self.pre_filter = transform, pre_transform, pre_filter
+        self.transform, self.pre_transform, self.pre_filter= transform, pre_transform, pre_filter
 
         if not empty:
-            self.data, self.slices = torch.load(self.processed_paths[0])
+            self.data, self.slices= torch.load(self.processed_paths[0])
 
-    @property
+    @ property
     def raw_file_names(self):
-        file_name_list = os.listdir(self.raw_dir)
+        file_name_list= os.listdir(self.raw_dir)
         # assert len(file_name_list) == 1     # currently assume we have a
         # # single raw file
         return file_name_list
 
-    @property
+    @ property
     def processed_file_names(self):
         return f'geometric_data_processed-{self.D}D.pt'
 
@@ -320,24 +323,24 @@ class SDFBenchmakr2015(InMemoryDataset):
                                   'No download allowed')
 
     def process(self):
-        data_smiles_list = []
-        data_list = []
+        data_smiles_list= []
+        data_list= []
 
         if self.dataset == '435008':
             for file, label in [(f'{self.dataset}_actives_clean.smi', 1),
                                 (f'{self.dataset}_inactives_clean.smi', 0)]:
-                smiles_path = os.path.join(self.root, 'raw', file)
-                smiles_list = pd.read_csv(smiles_path, sep='\t', header=None)[0]
+                smiles_path= os.path.join(self.root, 'raw', file)
+                smiles_list= pd.read_csv(smiles_path, sep='\t', header=None)[0]
 
                 for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
-                    smi = smiles_list[i]
+                    smi= smiles_list[i]
 
-                    data = smiles2graph(2, smi)
+                    data= smiles2graph(2, smi)
                     if data is None:
                         continue
-                    data.id = torch.tensor([i])
-                    data.y = torch.tensor([label])
-                    data.smiles = smi
+                    data.id= torch.tensor([i])
+                    data.y= torch.tensor([label])
+                    data.smiles= smi
                     # print(data)
                     data_list.append(data)
                     data_smiles_list.append(smiles_list[i])
@@ -346,18 +349,18 @@ class SDFBenchmakr2015(InMemoryDataset):
             raise ValueError('Invalid dataset name')
 
         if self.pre_filter is not None:
-            data_list = [data for data in data_list if self.pre_filter(data)]
+            data_list= [data for data in data_list if self.pre_filter(data)]
 
         if self.pre_transform is not None:
-            data_list = [self.pre_transform(data) for data in data_list]
+            data_list= [self.pre_transform(data) for data in data_list]
 
         # write data_smiles_list in processed paths
-        data_smiles_series = pd.Series(data_smiles_list)
+        data_smiles_series= pd.Series(data_smiles_list)
         data_smiles_series.to_csv(os.path.join(self.processed_dir,
                                                'smiles.csv'), index=False,
                                   header=False)
 
-        data, slices = self.collate(data_list)
+        data, slices= self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
 
@@ -370,7 +373,7 @@ def create_circular_fingerprint(mol, radius, size, chirality):
     :param chirality:
     :return: np array of morgan fingerprint
     """
-    fp = GetMorganFingerprintAsBitVect(mol, radius,
+    fp= GetMorganFingerprintAsBitVect(mol, radius,
                                        nBits=size, useChirality=chirality)
     return np.array(fp)
 
@@ -379,20 +382,20 @@ def create_circular_fingerprint(mol, radius, size, chirality):
 # test MoleculeDataset object
 if __name__ == "__main__":
     print('testing...')
-    dataset = '435008'
+    dataset= '435008'
     # windows
     # root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
     # linux
-    root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
+    root= '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
     if dataset == '435008':
         root += 'qsar_benchmark2015'
-        dataset = dataset
+        dataset= dataset
     else:
         raise Exception('cannot find dataset')
-    dataset = MoleculeDataset(D=2, root=root, dataset=dataset)
+    dataset= MoleculeDataset(D=2, root=root, dataset=dataset)
     print(dataset[0])
 
-    data = dataset[0]
+    data= dataset[0]
     print(data.x)
     print(data.p)
     print(data.edge_index)
