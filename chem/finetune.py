@@ -5,13 +5,11 @@ from torch_geometric.data import DataLoader
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
 from tqdm import tqdm
 import numpy as np
 
-from model import MolGCN, GNN_graphpred
 from sklearn.metrics import roc_auc_score
 
 from splitters import scaffold_split, random_split
@@ -22,8 +20,14 @@ import shutil
 
 from tensorboardX import SummaryWriter
 
-criterion = nn.BCEWithLogitsLoss(reduction="none")
-criterion = nn.BCELoss()
+from clearml import Task
+
+from model import MolGCN, GNN_graphpred
+from evaluation import enrichment
+from util import print_model_size
+
+criterion = nn.BCEWithLogitsLoss()
+# criterion = nn.BCELoss()
 
 
 def train(args, model, device, loader, optimizer):
@@ -47,16 +51,18 @@ def train(args, model, device, loader, optimizer):
         # Whether y is non-null or not.
         # is_valid = y**2 > 0
         # Loss matrix
+        # print(f"pred:{pred.double()}, y:{y}")
         loss = criterion(pred.double(), y)
-        # print(f'loss:{loss}')
         # loss_mat = criterion(pred.double(), (y + 1) / 2)
         # loss matrix after removing null target
         # loss_mat = torch.where(is_valid, loss_mat, torch.zeros(
         #     loss_mat.shape).to(loss_mat.device).to(loss_mat.dtype))
+        # print(f'loss:{loss}')
         loss_lst.append(loss)
         optimizer.zero_grad()
         # loss = torch.sum(loss_mat) / torch.sum(is_valid)
         loss.backward()
+        torch.cuda.empty_cache()
 
         optimizer.step()
     batch_loss = sum(loss_lst) / float(len(loader))
@@ -76,10 +82,12 @@ def eval(args, model, device, loader):
                             batch.edge_attr, batch.batch)
 
         y_true.append(batch.y.view(pred.shape))
-        # print(f'y_true:{y_true}')
+        print(f'batch.y:{batch.y}')
 
+        print(f'pred:{pred}')
+        pred = torch.where(pred > 0.5, torch.ones(
+            pred.shape, device=device), torch.zeros(pred.shape, device=device))
         y_scores.append(pred)
-        # print(f'y_scores:{y_scores}')
 
     y_true = torch.cat(y_true, dim=0).cpu().numpy()
     y_scores = torch.cat(y_scores, dim=0).cpu().numpy()
@@ -87,7 +95,7 @@ def eval(args, model, device, loader):
     roc_list = []
 
     for i in range(y_true.shape[1]):
-        roc_list.append(roc_auc_score(y_true[:, i], y_scores[:, i]))
+        roc_list.append(enrichment(y_true[:, i], y_scores[:, i]))
     # for i in range(y_true.shape[1]):
     #     # AUC is only defined when there is at least one positive data.
     #     if np.sum(y_true[:, i] == 1) > 0 and np.sum(y_true[:, i] == -1) > 0:
@@ -104,6 +112,10 @@ def eval(args, model, device, loader):
 
 
 def main():
+    # start clearml as the task manager. this is optional.
+
+    # task = Task.init(project_name="kernel GNN", task_name="out-of-memory")
+
     # Training settings
     parser = argparse.ArgumentParser(
         description='PyTorch implementation of pre-training of graph neural networks')
@@ -150,8 +162,7 @@ def main():
 
     torch.manual_seed(args.runseed)
     np.random.seed(args.runseed)
-    device = torch.device("cuda:" + str(args.device)
-                          ) if torch.cuda.is_available() else torch.device("cpu")
+    device = torch.device("cuda:" + str(args.device)) if torch.cuda.is_available() else torch.device("cpu")
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.runseed)
 
@@ -191,6 +202,7 @@ def main():
         dataset = args.dataset
     else:
         raise Exception('cannot find dataset')
+
     dataset = MoleculeDataset(D=2, root=root, dataset=dataset)
     index = list(range(400)) + list(range(1000, 1400))
     dataset = dataset[index]
@@ -228,16 +240,16 @@ def main():
     print('loading data')
     train_loader = DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
-    val_loader = DataLoader(valid_dataset, batch_size=args.batch_size,
+    val_loader = DataLoader(valid_dataset, batch_size=len(valid_dataset),
                             shuffle=False, num_workers=args.num_workers)
-    test_loader = DataLoader(test_dataset, batch_size=len(test_dataset),  # args.batch_size,
-                             shuffle=False, num_workers=args.num_workers)
+    test_loader = DataLoader(test_dataset, batch_size=len(
+        test_dataset), shuffle=False, num_workers=args.num_workers)
     print('data loaded!')
     # set up model
-    model = GNN_graphpred(num_layers=4, num_kernel_layers=20, x_dim=5, p_dim=3, edge_attr_dim=1, num_tasks=num_tasks, JK=args.JK,
-                          drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling)
+    model = GNN_graphpred(num_layers=4, num_kernel_layers=15, x_dim=5, p_dim=3, edge_attr_dim=1, num_tasks=num_tasks, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling)
+    # check model size
+    print_model_size(model)
 
-    print(f'num params:{len(list(model.parameters()))}')
     if not args.input_model_file == "":
         model.from_pretrained(args.input_model_file)
 
@@ -249,12 +261,9 @@ def main():
     model_param_group = []
     model_param_group.append({"params": model.gnn.parameters()})
     if args.graph_pooling == "attention":
-        model_param_group.append(
-            {"params": model.pool.parameters(), "lr": args.lr * args.lr_scale})
-    model_param_group.append(
-        {"params": model.graph_pred_linear.parameters(), "lr": args.lr * args.lr_scale})
-    optimizer = optim.Adam(model_param_group, lr=args.lr,
-                           weight_decay=args.decay)
+        model_param_group.append({"params": model.pool.parameters(), "lr": args.lr * args.lr_scale})
+    model_param_group.append({"params": model.graph_pred_linear.parameters(), "lr": args.lr * args.lr_scale})
+    optimizer = optim.Adam(model_param_group, lr=args.lr, weight_decay=args.decay)
     # print(optimizer)
 
     train_acc_list = []
@@ -263,7 +272,7 @@ def main():
 
     if not args.filename == "":
         fname = 'runs/finetune_cls_runseed' + \
-            str(args.runseed) + '/' + args.filename
+                str(args.runseed) + '/' + args.filename
         # delete the directory if there exists one
         if os.path.exists(fname):
             shutil.rmtree(fname)
