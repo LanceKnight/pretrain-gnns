@@ -286,54 +286,9 @@ class KernelConv(Module):
         return sc  # , length_sc, angle_sc, supp_attr_sc, center_attr_sc, edge_attr_support_sc
 
 
-class KernelSetConv(Module):
-    def __init__(self, L, D, node_attr_dim, edge_attr_dim):
-        super(KernelSetConv, self).__init__()
-        self.L = L
-
-# test of std kernel
-        p_support = torch.tensor([[1.2990e+00, 7.5000e-01]]).unsqueeze(0)
-        # print(p_support)
-
-        x_center = torch.tensor([[16, 32.067, 1.8, 2, 6]]).unsqueeze(0)
-
-        x_support = torch.tensor(
-            [[6.0000, 12.0110, 1.7000, 4.0000, 4.0000]]).unsqueeze(0)
-
-        edge_attr_support = torch.tensor([[2]], dtype=torch.float).unsqueeze(0)
-
-        kernel1_std = Data(p_support=p_support, x_support=x_support,
-                           x_center=x_center, edge_attr_support=edge_attr_support)
-
-        p_support = torch.tensor([[1.2990e+00, 7.5000e-01],
-                                  [-1.2990e+00, 7.5000e-01],
-                                  [-2.7756e-16, -1.5000e+00]]).unsqueeze(0)
-        # print(p_support)
-
-        x_support = torch.tensor([[16, 32.067, 1.8, 2, 6],
-                                  [6.0000, 12.0110, 1.7000, 4.0000, 4.0000],
-                                  [1.0000, 1.0080, 1.2000, 1.0000, 1.0000]]).unsqueeze(0)
-
-        x_center = torch.tensor(
-            [[6.0000, 12.0110, 1.7000, 4.0000, 4.0000]]).unsqueeze(0)
-
-        edge_attr_support = torch.tensor(
-            [[2], [1], [1]], dtype=torch.float).unsqueeze(0)
-
-        kernel3_std = Data(p_support=p_support, x_support=x_support,
-                           x_center=x_center, edge_attr_support=edge_attr_support)
-
-#         kernel1 = KernelConv(init_kernel = kernel1_std)
-        kernel1 = KernelConv(L=L, D=D, num_supports=1,
-                             node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
-        kernel2 = KernelConv(L=L, D=D, num_supports=2,
-                             node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
-
-#         kernel3 = KernelConv(init_kernel = kernel3_std)
-        kernel3 = KernelConv(L=L, D=D, num_supports=3,
-                             node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
-        kernel4 = KernelConv(L=L, D=D, num_supports=4,
-                             node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
+class BaseKernelSetConv(Module):
+    def __init__(self, kernel1, kernel2, kernel3, kernel4):
+        super(BaseKernelSetConv, self).__init__()
 
         self.kernel_set = ModuleList([kernel1, kernel2, kernel3, kernel4])
 
@@ -550,14 +505,73 @@ class KernelSetConv(Module):
         return sc_list
 
 
+class KernelSetConv(BaseKernelSetConv):
+    def __init__(self, L, D, node_attr_dim, edge_attr_dim):
+
+        self.L = L
+
+    # test of std kernel
+        p_support = torch.tensor([[1.2990e+00, 7.5000e-01]]).unsqueeze(0)
+        # print(p_support)
+
+        x_center = torch.tensor([[16, 32.067, 1.8, 2, 6]]).unsqueeze(0)
+
+        x_support = torch.tensor(
+            [[6.0000, 12.0110, 1.7000, 4.0000, 4.0000]]).unsqueeze(0)
+
+        edge_attr_support = torch.tensor([[2]], dtype=torch.float).unsqueeze(0)
+
+        kernel1_std = Data(p_support=p_support, x_support=x_support,
+                           x_center=x_center, edge_attr_support=edge_attr_support)
+
+        p_support = torch.tensor([[1.2990e+00, 7.5000e-01],
+                                  [-1.2990e+00, 7.5000e-01],
+                                  [-2.7756e-16, -1.5000e+00]]).unsqueeze(0)
+        # print(p_support)
+
+        x_support = torch.tensor([[16, 32.067, 1.8, 2, 6],
+                                  [6.0000, 12.0110, 1.7000, 4.0000, 4.0000],
+                                  [1.0000, 1.0080, 1.2000, 1.0000, 1.0000]]).unsqueeze(0)
+
+        x_center = torch.tensor(
+            [[6.0000, 12.0110, 1.7000, 4.0000, 4.0000]]).unsqueeze(0)
+
+        edge_attr_support = torch.tensor(
+            [[2], [1], [1]], dtype=torch.float).unsqueeze(0)
+
+        kernel3_std = Data(p_support=p_support, x_support=x_support,
+                           x_center=x_center, edge_attr_support=edge_attr_support)
+
+    #         kernel1 = KernelConv(init_kernel = kernel1_std)
+        kernel1 = KernelConv(L=L, D=D, num_supports=1,
+                             node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
+        kernel2 = KernelConv(L=L, D=D, num_supports=2,
+                             node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
+
+    #         kernel3 = KernelConv(init_kernel = kernel3_std)
+        kernel3 = KernelConv(L=L, D=D, num_supports=3,
+                             node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
+        kernel4 = KernelConv(L=L, D=D, num_supports=4,
+                             node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
+        super(KernelSetConv, self).__init__(kernel1, kernel2, kernel3, kernel4)
+
+    def forward(self, *argv, **kwargv):
+        return forward(argv, kwargv)
+
+
+class PredefinedKernelSetConv():
+    pass
+
+
 class KernelLayer(Module):
-    def __init__(self, x_dim, p_dim, edge_dim, out_dim):
-        '''
-        a wrapper of KernelSetConv for clear input/output dimension
-        inputs:
+    '''
+        a wrapper of KernelSetConv for clear input/output dimension, inputs:
         D: dimension
         L: number of KernelConvSet
-        '''
+    '''
+
+    def __init__(self, x_dim, p_dim, edge_dim, out_dim):
+
         super(KernelLayer, self).__init__()
         self.conv = KernelSetConv(
             L=out_dim, D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_dim)

@@ -161,9 +161,9 @@ def main():
 
     # ==========set up dataset==========
     # windows
-    # root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
+    root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
     # linux
-    root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
+    # root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
     if args.dataset == '435008':
         root = root + 'qsar_benchmark2015'
         dataset = args.dataset
