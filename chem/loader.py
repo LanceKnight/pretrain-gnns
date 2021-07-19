@@ -99,6 +99,12 @@ def smiles2graph(D, smiles):
     except Exception as e:
         print(f'{e}, smiles:{smiles}')
 
+    if D == 2:
+        Chem.rdDepictor.Compute2DCoords(mol)
+    if D == 3:
+        AllChem.EmbedMolecule(mol)
+        AllChem.UFFOptimizeMolecule(mol)
+
     data = mol2graph(mol)
     return data
 
@@ -107,19 +113,16 @@ def sdf2graphs(sdf):
     suppl = Chem.SDMolSupplier(sdf)
     data_list = []
     smiles_list = []
-    for mol in suppl:
-        data = mol2graph
+    for i, mol in tqdm(enumerate(suppl)):
+        # print(f'i:{i}')
+        if(mol is None):
+            continue
+        data = mol2graph(mol)
         data_list.append(data)
         smiles_list.append(Chem.MolToSmiles(mol))
     return data_list, smiles_list
 
 def mol2graph(mol):
-
-    if D == 2:
-        Chem.rdDepictor.Compute2DCoords(mol)
-    if D == 3:
-        AllChem.EmbedMolecule(mol)
-        AllChem.UFFOptimizeMolecule(mol)
 
     conf = mol.GetConformer()
 
@@ -131,8 +134,7 @@ def mol2graph(mol):
         atomic_num = atom.GetAtomicNum()
         h = get_atom_rep(atomic_num)
 
-        # , conf.GetAtomPosition(i).z])
-        atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y])
+        atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z])
         atom_attr.append(h)
 
     # get bond attributes
@@ -340,6 +342,7 @@ class SDFBenchmakr2015(InMemoryDataset):
         for file, label in [(f'{self.dataset}_actives_clean.sdf', 1), (f'{self.dataset}_inactives_clean.sdf', 0)]:
             sdf_path = os.path.join(self.root, 'raw', file)
             data_list, smiles_list = sdf2graphs(sdf_path)
+        print(f'data_list type:{data_list}, len:{len(data_list)}')
         for data, i in tqdm(enumerate(data_list)):
             data.id = torch.tensor([i])
             data.y = torch.tensor([label])
@@ -382,12 +385,12 @@ def create_circular_fingerprint(mol, radius, size, chirality):
 # test MoleculeDataset object
 if __name__ == "__main__":
     print('testing...')
-    dataset = '435008'
+    dataset = '1798'
     # windows
     # root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
     # linux
     root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
-    if dataset == '435008':
+    if dataset == '435008' or dataset == '1798':
         # root += 'qsar_benchmark2015'
         root += '3d_benchmark2015'
         dataset = dataset
