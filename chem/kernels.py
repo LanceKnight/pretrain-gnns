@@ -524,7 +524,7 @@ class KernelSetConv(Module):
 #             print('edge_attr_neighbor')
 #             print(edge_attr_neighbor)
                 sc = self.kernel_set[deg - 1](data=data)
-                zeros = torch.zeros(self.L, x_focal.shape[0], 4, device=sc.device)#, requires_grad=False)
+                zeros = torch.zeros(self.L, x_focal.shape[0], 4, device=sc.device)  # , requires_grad=False)
                 zeros[:, :, deg - 1] = sc
                 sc = zeros
 #                 print(f'sc:{sc.shape}')
@@ -564,3 +564,86 @@ class KernelLayer(Module):
 
     def forward(self, data):
         return self.conv(data=data)
+
+
+def generate_kernel(D, typical_compound_smiles, center_atom_id):
+    '''
+    given a typical compound containing a certain kernal, and the center atom id, genrate the kernel, it is used to convert functional groups into kernels
+
+    '''
+    if D == None:
+        raise Exception('generate_kernel2grpah() needs to input D to specifiy 2D or 3D graph generation.')
+
+    mol = Chem.MolFromSmiles(smiles)
+    mol = Chem.AddHs(mol)
+
+    if D == 2:
+        rdkit.Chem.rdDepictor.Compute2DCoords(mol)
+    if D == 3:
+        AllChem.EmbedMolecule(mol)
+        AllChem.UFFOptimizeMolecule(mol)
+
+    conf = mol.GetConformer()
+
+    atom_pos = []
+    atom_attr = []
+
+    all_atoms = mol.GetAtoms()
+    center_atom = all_atoms[center_atom_id]
+    print(f'center atom:{center_atom.GetSymbol()}')
+    supports = center_atom.GetNeighbors()
+
+    x_center = get_atom_rep(center_atom.GetAtomicNum())
+
+    p_list = []
+    x_list = []
+    bond_attr_list = []
+    print()
+    print('atom idx:')
+    for i, atom in enumerate(mol.GetAtoms()):
+        print(f'{atom.GetIdx()}, {atom.GetSymbol()}')
+
+    for idx, edge in enumerate(center_atom.GetBonds()):
+        support_start_id = edge.GetBeginAtomIdx()
+        support_end_id = edge.GetEndAtomIdx()
+#         print(f'support_start_id:{support_start_id}')
+#         print(f'support_end_id:{support_end_id}')
+        if (support_start_id == center_atom_id):
+            support_id = support_end_id
+        else:
+            support_id = support_start_id
+        support = all_atoms[support_id]
+        x_list.append(get_atom_rep(support.GetAtomicNum()))
+        if D == 2:
+            p_support = p_list.append([conf.GetAtomPosition(support_id).x - conf.GetAtomPosition(center_atom_id).x, conf.GetAtomPosition(support_id).y - conf.GetAtomPosition(center_atom_id).y])
+        if D == 3:
+            p_support = p_list.append([conf.GetAtomPosition(support_id).x - conf.GetAtomPosition(center_atom_id).x, conf.GetAtomPosition(support_id).y -
+                                       conf.GetAtomPosition(center_atom_id).y, conf.GetAtomPosition(support_id).z - conf.GetAtomPosition(center_atom_id).z])
+
+        bond_attr = None
+        bond_type = edge.GetBondType()
+        if bond_type == Chem.rdchem.BondType.SINGLE:
+            bond_attr = [1]
+        elif bond_type == Chem.rdchem.BondType.DOUBLE:
+            bond_attr = [2]
+        elif bond_type == Chem.rdchem.BondType.TRIPLE:
+            bond_attr = [3]
+        elif bond_type == Chem.rdchem.BondType.AROMATIC:
+            bond_attr = [4]
+        bond_attr_list.append(bond_attr)
+
+    x_center = torch.tensor(x_center).unsqueeze(0).unsqueeze(0)
+    x_support = torch.tensor(x_list).unsqueeze(0)
+    p_support = torch.tensor(p_list).unsqueeze(0)
+    edge_attr_support = torch.tensor(bond_attr_list).unsqueeze(0)
+
+#     print('x_center')
+#     print(x_center)
+#     print('x_support')
+#     print(x_support)
+#     print('p_support')
+#     print(p_support)
+#     print('edge_attr_support')
+#     print(edge_attr_support)
+
+    return x_center, x_support, p_support, edge_attr_support
