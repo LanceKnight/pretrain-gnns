@@ -131,19 +131,18 @@ def main():
                         help='relative learning rate for the feature extraction layer (default: 1)')
     parser.add_argument('--decay', type=float, default=0,
                         help='weight decay (default: 0)')
-    parser.add_argument('--num_layer', type=int, default=5,
+    parser.add_argument('--num_layers', type=int, default=5,
                         help='number of GNN message passing layers (default: 5).')
-    parser.add_argument('--emb_dim', type=int, default=300,
-                        help='embedding dimensions (default: 300)')
+    parser.add_argument('--num_kernelsets', type=int, default=15, help='number of kernelsets (default: 15).')
+
     parser.add_argument('--dropout_ratio', type=float, default=0.5,
                         help='dropout ratio (default: 0.5)')
     parser.add_argument('--graph_pooling', type=str, default="mean",
                         help='graph level pooling (sum, mean, max, set2set, attention)')
     parser.add_argument('--JK', type=str, default="last",
                         help='how the node features across layers are combined. last, sum, max or concat')
-    parser.add_argument('--gnn_type', type=str, default="gin")
-    parser.add_argument('--dataset', type=str, default='tox21',
-                        help='root directory of dataset. For now, only classification.')
+    parser.add_argument('--dataset', type=str, default='435008',
+                        help='name of the dataset')
     parser.add_argument('--input_model_file', type=str, default='',
                         help='filename to read the model (if there is any)')
     parser.add_argument('--filename', type=str,
@@ -165,32 +164,6 @@ def main():
     device = torch.device("cuda:" + str(args.device)) if torch.cuda.is_available() else torch.device("cpu")
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.runseed)
-
-    # Bunch of classification tasks
-    if args.dataset == "tox21":
-        num_tasks = 12
-    elif args.dataset == "hiv":
-        num_tasks = 1
-    elif args.dataset == "pcba":
-        num_tasks = 128
-    elif args.dataset == "muv":
-        num_tasks = 17
-    elif args.dataset == "bace":
-        num_tasks = 1
-    elif args.dataset == "bbbp":
-        num_tasks = 1
-    elif args.dataset == "toxcast":
-        num_tasks = 617
-    elif args.dataset == "sider":
-        num_tasks = 27
-    elif args.dataset == "clintox":
-        num_tasks = 2
-    elif args.dataset == "adrb2":
-        num_tasks = 1
-    elif args.dataset == '435008':
-        num_tasks = 1
-    else:
-        raise ValueError("Invalid dataset name.")
 
     # set up dataset
     # windows
@@ -251,7 +224,8 @@ def main():
     print('data loaded!')
     # set up model
 
-    model = GNN_graphpred(num_layers=4, num_kernel_layers=15, x_dim=5, p_dim=D, edge_attr_dim=1, num_tasks=num_tasks, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling)
+    model = GNN_graphpred(num_layers=args.num_layers, num_kernelsets=args.num_kernelsets, x_dim=5, p_dim=D,
+                          edge_attr_dim=1, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling)
 
     # check model size
     print_model_size(model)

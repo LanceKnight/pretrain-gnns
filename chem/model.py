@@ -9,18 +9,18 @@ from loader import MoleculeDataset
 
 
 class MolGCN(MessagePassing):
-    def __init__(self, num_layers, num_kernel_layers, x_dim, p_dim, edge_attr_dim):
+    def __init__(self, num_layers, num_kernelsets, x_dim, p_dim, edge_attr_dim):
         super(MolGCN, self).__init__(aggr='add')
         self.num_layers = num_layers
         if num_layers < 1:
             raise Exception('at least one convolution layer is needed')
 
         self.layers = ModuleList()
-        kernel_layer = KernelLayer(x_dim, p_dim, edge_attr_dim, num_kernel_layers)
+        kernel_layer = KernelLayer(x_dim, p_dim, edge_attr_dim, num_kernelsets)
         self.layers.append(kernel_layer)
-        x_dim = num_kernel_layers * 4
+        x_dim = num_kernelsets * 4
         for i in range(num_layers - 1):
-            kernel_layer = KernelLayer(x_dim, p_dim, edge_attr_dim, num_kernel_layers)
+            kernel_layer = KernelLayer(x_dim, p_dim, edge_attr_dim, num_kernelsets)
             self.layers.append(kernel_layer)
 
     def forward(self, *argv, **kwargv):
@@ -76,18 +76,17 @@ class GNN_graphpred(torch.nn.Module):
     JK-net: https://arxiv.org/abs/1806.03536
     """
 
-    def __init__(self, num_layers, num_kernel_layers, x_dim, p_dim, edge_attr_dim, num_tasks, JK="last", drop_ratio=0, graph_pooling="mean"):
+    def __init__(self, num_layers, num_kernelsets, x_dim, p_dim, edge_attr_dim, JK="last", drop_ratio=0, graph_pooling="mean"):
         super(GNN_graphpred, self).__init__()
         self.num_layer = num_layers
         self.drop_ratio = drop_ratio
         self.JK = JK
-        self.num_tasks = num_tasks
         self.D = p_dim
 
         if self.num_layer < 1:
             raise ValueError("Number of GNN layers must be greater than 0.")
 
-        self.gnn = MolGCN(num_layers=num_layers, num_kernel_layers=num_kernel_layers, x_dim=x_dim, p_dim=p_dim, edge_attr_dim=edge_attr_dim)
+        self.gnn = MolGCN(num_layers=num_layers, num_kernelsets=num_kernelsets, x_dim=x_dim, p_dim=p_dim, edge_attr_dim=edge_attr_dim)
 
         # Different kind of graph pooling
         if graph_pooling == "sum":
@@ -96,20 +95,20 @@ class GNN_graphpred(torch.nn.Module):
             self.pool = global_mean_pool
         elif graph_pooling == "max":
             self.pool = global_max_pool
-        elif graph_pooling == "attention":
-            if self.JK == "concat":
-                self.pool = GlobalAttention(gate_nn=torch.nn.Linear(
-                    (self.num_layer + 1) * emb_dim, 1))
-            else:
-                self.pool = GlobalAttention(
-                    gate_nn=torch.nn.Linear(emb_dim, 1))
-        elif graph_pooling[:-1] == "set2set":
-            set2set_iter = int(graph_pooling[-1])
-            if self.JK == "concat":
-                self.pool = Set2Set((self.num_layer + 1)
-                                    * emb_dim, set2set_iter)
-            else:
-                self.pool = Set2Set(emb_dim, set2set_iter)
+        # elif graph_pooling == "attention":
+        #     if self.JK == "concat":
+        #         self.pool = GlobalAttention(gate_nn=torch.nn.Linear(
+        #             (self.num_layer + 1) * emb_dim, 1))
+        #     else:
+        #         self.pool = GlobalAttention(
+        #             gate_nn=torch.nn.Linear(emb_dim, 1))
+        # elif graph_pooling[:-1] == "set2set":
+        #     set2set_iter = int(graph_pooling[-1])
+        #     if self.JK == "concat":
+        #         self.pool = Set2Set((self.num_layer + 1)
+        #                             * emb_dim, set2set_iter)
+        #     else:
+        #         self.pool = Set2Set(emb_dim, set2set_iter)
         else:
             raise ValueError("Invalid graph pooling type.")
 
@@ -121,9 +120,9 @@ class GNN_graphpred(torch.nn.Module):
 
         if self.JK == "concat":
             self.graph_pred_linear = torch.nn.Linear(
-                self.mult * (self.num_layer + 1) * self.emb_dim, self.num_tasks)
+                self.mult * (self.num_layer + 1) * self.emb_dim, 1)
         else:
-            self.graph_pred_linear = torch.nn.Linear(4 * num_kernel_layers, self.num_tasks)
+            self.graph_pred_linear = torch.nn.Linear(4 * num_kernelsets, 1)
 
     def from_pretrained(self, model_file):
         # self.gnn = GNN(self.num_layer, self.emb_dim, JK = self.JK, drop_ratio = self.drop_ratio)
