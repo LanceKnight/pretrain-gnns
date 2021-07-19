@@ -203,7 +203,10 @@ def main():
     else:
         raise Exception('cannot find dataset')
 
-    dataset = MoleculeDataset(D=2, root=root, dataset=dataset)
+    D = 2
+    print(f'woring on {D}D now...')
+
+    dataset = MoleculeDataset(D=D, root=root, dataset=dataset)
     print(dataset[0])
     index = list(range(400)) + list(range(1000, 1400))
     dataset = dataset[index]
@@ -247,9 +250,8 @@ def main():
         test_dataset), shuffle=False, num_workers=args.num_workers)
     print('data loaded!')
     # set up model
-    D = 3
-    print(f'woring on {D}D now...')
-    model = GNN_graphpred(num_layers=4, num_kernel_layers=15, x_dim=5, p_dim=3, edge_attr_dim=1, num_tasks=num_tasks, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling)
+
+    model = GNN_graphpred(num_layers=4, num_kernel_layers=15, x_dim=5, p_dim=D, edge_attr_dim=1, num_tasks=num_tasks, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling)
 
     # check model size
     print_model_size(model)

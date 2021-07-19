@@ -170,17 +170,17 @@ class KernelConv(Module):
         edge_attr_support = self.edge_attr_support
         p_support = self.p_support
 
-#         print('=====cal total sc')
-#         print(f'x_center:{x_center.shape}')
-#         print(f'x_support:{x_support.shape}')
-#         print(f'edge_attr_support:{edge_attr_support.shape}')
-#         print(f'p_support:{p_support.shape}')
-#         print('\n')
-#         print(f'x_focal:{x_focal.shape}')
-#         print(f'p_focal:{p_focal.shape}')
-#         print(f'x_neighbor:{x_neighbor.shape}')
-#         print(f'p_neighbor:{p_neighbor.shape}')
-#         print(f'edge_attr_neighbor:{edge_attr_neighbor.shape}')
+        # print('=====cal total sc')
+        # print(f'x_center:{x_center.shape}')
+        # print(f'x_support:{x_support.shape}')
+        # print(f'edge_attr_support:{edge_attr_support.shape}')
+        # print(f'p_support:{p_support.shape}')
+        # print('\n')
+        # print(f'x_focal:{x_focal.shape}')
+        # print(f'p_focal:{p_focal.shape}')
+        # print(f'x_neighbor:{x_neighbor.shape}')
+        # print(f'p_neighbor:{p_neighbor.shape}')
+        # print(f'edge_attr_neighbor:{edge_attr_neighbor.shape}')
 
         # calculate the support attribute score
         permuted_x_support = self.permute(x_support)
@@ -524,7 +524,7 @@ class KernelSetConv(Module):
 #             print('edge_attr_neighbor')
 #             print(edge_attr_neighbor)
                 sc = self.kernel_set[deg - 1](data=data)
-                zeros = torch.zeros(self.L, x_focal.shape[0], 4, device=sc.device)#, requires_grad=False)
+                zeros = torch.zeros(self.L, x_focal.shape[0], 4, device=sc.device)  # , requires_grad=False)
                 zeros[:, :, deg - 1] = sc
                 sc = zeros
 #                 print(f'sc:{sc.shape}')
