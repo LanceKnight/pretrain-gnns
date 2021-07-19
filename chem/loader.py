@@ -64,7 +64,7 @@ def get_atom_rep(atomic_num, package='rdkit'):
         elem_lst = lookup_from_rdkit(element_nums)
     elif package == 'pymatgen':
         raise Exception('pymatgen implementation is deprecated.')
-        #elem_lst = lookup_from_pymatgen(element_nums)
+        # elem_lst = lookup_from_pymatgen(element_nums)
     else:
         raise Exception('cannot generate atom representation lookup table')
 
@@ -115,7 +115,7 @@ def smiles2graph(D, smiles):
         atomic_num = atom.GetAtomicNum()
         h = get_atom_rep(atomic_num)
 
-        atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y], conf.GetAtomPosition(i).z]))
+        atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z])
         atom_attr.append(h)
 
     # get bond attributes
@@ -154,15 +154,14 @@ def smiles2graph(D, smiles):
 
 
 # def mol2graph(mol):
-    
 
 
 class MoleculeDataset(InMemoryDataset):
     def __init__(self,
                  root,
                  D=2,
-                 #data = None,
-                 #slices = None,
+                 # data = None,
+                 # slices = None,
                  transform=None,
                  pre_transform=None,
                  pre_filter=None,
@@ -199,14 +198,14 @@ class MoleculeDataset(InMemoryDataset):
     #         data[key] = item[s]
     #     return data
 
-    @property
+    @ property
     def raw_file_names(self):
         file_name_list = os.listdir(self.raw_dir)
         # assert len(file_name_list) == 1     # currently assume we have a
         # # single raw file
         return file_name_list
 
-    @property
+    @ property
     def processed_file_names(self):
         return f'geometric_data_processed-{self.D}D.pt'
 
