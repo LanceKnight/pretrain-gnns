@@ -129,6 +129,14 @@ class GNN_graphpred(torch.nn.Module):
         # self.gnn = GNN(self.num_layer, self.emb_dim, JK = self.JK, drop_ratio = self.drop_ratio)
         self.gnn.load_state_dict(torch.load(model_file))
 
+    def save(self, path):
+        layers = self.gnn.layers
+        print(f'there are {len(layers)} layers')
+        for i, layer in enumerate(layers):
+            print(f'saving {i}th layer')
+            torch.save(layer.state_dict(), f'{path}/{i}th_layer.pth')
+
+
     def forward(self, *argv):
         if len(argv) == 5:
             x, p, edge_index, edge_attr, batch = argv[0], argv[1], argv[2], argv[3], argv[4]
