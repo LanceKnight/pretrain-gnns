@@ -82,6 +82,7 @@ class GNN_graphpred(torch.nn.Module):
         self.drop_ratio = drop_ratio
         self.JK = JK
         self.num_tasks = num_tasks
+        self.D = p_dim
 
         if self.num_layer < 1:
             raise ValueError("Number of GNN layers must be greater than 0.")
@@ -130,7 +131,7 @@ class GNN_graphpred(torch.nn.Module):
 
     def save(self, path):
         layers = self.gnn.layers
-        print(f'there are {len(layers)} layers')
+        print(f'{self.D}D, there are {len(layers)} layers')
         for i, layer in enumerate(layers):
             print(f'saving {i}th layer')
             torch.save(layer.state_dict(), f'{path}/{i}th_layer.pth')
