@@ -99,6 +99,22 @@ def smiles2graph(D, smiles):
     except Exception as e:
         print(f'{e}, smiles:{smiles}')
 
+    data = mol2graph(mol)
+    return data
+
+
+def sdf2graphs(sdf):
+    suppl = Chem.SDMolSupplier(sdf)
+    data_list = []
+    smiles_list = []
+    for mol in suppl:
+        data = mol2graph
+        data_list.append(data)
+        smiles_list.append(Chem.MolToSmiles(mol))
+    return data_list, smiles_list
+
+def mol2graph(mol):
+
     if D == 2:
         Chem.rdDepictor.Compute2DCoords(mol)
     if D == 3:
@@ -152,10 +168,6 @@ def smiles2graph(D, smiles):
 
     data = Data(x=x, p=p, edge_index=edge_index, edge_attr=edge_attr)
     return data
-
-
-# def mol2graph(mol):
-    
 
 
 class MoleculeDataset(InMemoryDataset):
@@ -325,24 +337,13 @@ class SDFBenchmakr2015(InMemoryDataset):
         data_smiles_list = []
         data_list = []
 
-        if self.dataset == '435008':
-            for file, label in [(f'{self.dataset}_actives_clean.smi', 1),
-                                (f'{self.dataset}_inactives_clean.smi', 0)]:
-                smiles_path = os.path.join(self.root, 'raw', file)
-                smiles_list = pd.read_csv(smiles_path, sep='\t', header=None)[0]
-
-                for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
-                    smi = smiles_list[i]
-
-                    data = smiles2graph(2, smi)
-                    if data is None:
-                        continue
-                    data.id = torch.tensor([i])
-                    data.y = torch.tensor([label])
-                    data.smiles = smi
-                    # print(data)
-                    data_list.append(data)
-                    data_smiles_list.append(smiles_list[i])
+        for file, label in [(f'{self.dataset}_actives_clean.sdf', 1), (f'{self.dataset}_inactives_clean.sdf', 0)]:
+            sdf_path = os.path.join(self.root, 'raw', file)
+            data_list, smiles_list = sdf2graphs(sdf_path)
+        for data, i in tqdm(enumerate(data_list)):
+            data.id = torch.tensor([i])
+            data.y = torch.tensor([label])
+            data.smiles = smiles_list[i]
 
         else:
             raise ValueError('Invalid dataset name')
@@ -387,11 +388,14 @@ if __name__ == "__main__":
     # linux
     root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
     if dataset == '435008':
-        root += 'qsar_benchmark2015'
+        # root += 'qsar_benchmark2015'
+        root += '3d_benchmark2015'
         dataset = dataset
     else:
         raise Exception('cannot find dataset')
-    dataset = MoleculeDataset(D=2, root=root, dataset=dataset)
+    # dataset = MoleculeDataset(D=2, root=root, dataset=dataset)
+
+    dataset = SDFBenchmakr2015(root=root, dataset=dataset)
     print(dataset[0])
 
     data = dataset[0]
