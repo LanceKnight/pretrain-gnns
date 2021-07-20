@@ -210,7 +210,7 @@ class MoleculeDataset(InMemoryDataset):
 
     @ property
     def processed_file_names(self):
-        return f'geometric_data_processed-{self.D}D.pt'
+        return f'{self.dataset}-{self.D}D.pt'
 
     def download(self):
         raise NotImplementedError('Must indicate valid location of raw data. '
