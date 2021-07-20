@@ -170,17 +170,7 @@ class MoleculeDataset(InMemoryDataset):
                  pre_filter=None,
                  dataset='zinc250k',
                  empty=False):
-        """
-        Adapted from qm9.py. Disabled the download functionality
-        :param root: directory of the dataset, containing a raw and processed
-        dir. The raw dir should contain the file containing the smiles, and the
-        processed dir can either empty or a previously processed file
-        :param dataset: name of the dataset. Currently only implemented for
-        zinc250k, chembl_with_labels, tox21, hiv, bace, bbbp, clintox, esol,
-        freesolv, lipophilicity, muv, pcba, sider, toxcast
-        :param empty: if True, then will not load any data obj. For
-        initializing empty dataset
-        """
+
         self.dataset = dataset
         self.root = root
         self.D = D
@@ -384,9 +374,9 @@ if __name__ == "__main__":
     print('testing...')
     dataset = '435008'
     # windows
-    # root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
+    root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
     # linux
-    root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
+    # root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
     if dataset == '435008':
         root += 'qsar_benchmark2015'
         dataset = dataset
