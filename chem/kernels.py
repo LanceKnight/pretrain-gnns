@@ -270,6 +270,9 @@ class KernelConv(Module):
             p_neighbor = kwargv['p_neighbor']
             edge_attr_neighbor = kwargv['edge_attr_neighbor']
 
+        if(p_focal.shape[1] != self.p_support.shape[1]):
+            raise Exception(f'data coordinates is of {p_focal.shape[1]}D, but the kernel is {p_support.shape[1]}D')
+
 
 #         x, x_focal, p, edge_attr, edge_index = self.convert_graph_to_receptive_field(x, p, edge_index, edge_attr)
 
