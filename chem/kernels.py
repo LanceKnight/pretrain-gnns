@@ -279,13 +279,13 @@ class KernelConv(Module):
         sc, length_sc, angle_sc, supp_attr_sc, center_attr_sc, edge_attr_support_sc = self.calculate_total_score(
             x_focal, p_focal, x_neighbor, p_neighbor, edge_attr_neighbor)
 
-        # print('\n')
-#         print(f'len sc:{length_sc.shape}')
-#         print(f'angle sc:{angle_sc.shape}')
-#         print(f'support attribute_sc:{supp_attr_sc.shape}')
-#         print(f'center_attr_sc:{center_attr_sc.shape}')
-#         print(f'edge attribute score:{edge_attr_support_sc.shape}')
-#         print(f'total sc: {sc.shape}')
+        print('\n')
+        print(f'len sc:{length_sc.shape}')
+        print(f'angle sc:{angle_sc.shape}')
+        print(f'support attribute_sc:{supp_attr_sc.shape}')
+        print(f'center_attr_sc:{center_attr_sc.shape}')
+        print(f'edge attribute score:{edge_attr_support_sc.shape}')
+        print(f'total sc: {sc.shape}')
         return sc  # , length_sc, angle_sc, supp_attr_sc, center_attr_sc, edge_attr_support_sc
 
 
@@ -457,8 +457,14 @@ class BaseKernelSetConv(Module):
         # loop through all possbile degrees. i.e. 1 to 4 bonds
         sc_list = []
         index_list = []
+
+        zeros = torch.zeros(sum(self.L), x.shape[0], device=p.device)
+        print('zeros')
+        print(zeros)
+        start_row_id = 0
+        start_col_id = 0
         for deg in range(1, 5):
-            # print(f'deg:{deg}')
+            print(f'deg:{deg}')
             receptive_field = self.convert_graph_to_receptive_field(
                 deg, x, p, edge_index, edge_attr)
 #             print('receptive_field')
@@ -482,36 +488,33 @@ class BaseKernelSetConv(Module):
 #             print('edge_attr_neighbor')
 #             print(edge_attr_neighbor)
                 sc = self.kernel_set[deg - 1](data=data)
-                zeros = torch.zeros(self.L, x_focal.shape[0], 4, device=sc.device)  # , requires_grad=False)
-                zeros[:, :, deg - 1] = sc
-                sc = zeros
-                print(f'sc:{sc.shape}')
-                sc_list.append(sc)
+
+                zeros[start_row_id:start_row_id + self.L[deg - 1], start_col_id:start_col_id + x_focal.shape[0]] = sc
+
                 index_list.append(selected_index)
-
+                start_row_id += self.L[deg - 1]
+                start_col_id += x_focal.shape[0]
             else:
-                #                 sc = torch.tensor([0] * self.L)
-                # the maxium value a arctain function can get
-                #                 max_atan = torch.tensor([math.pi / 2] * self.L)
-                #                 sc = max_atan
-                #                 sc = torch.zeros(self.L, x_focal.shape[0], 4)
-                pass
 
-        sc_list = torch.cat(sc_list, dim=1)
-        # print(index_list)
+                start_row_id += self.L[deg - 1]
+
+        sc = zeros
+
         index_list = torch.cat(index_list)
-#         print(f'sc_list:{sc_list}')
-        new_index = self.get_reorder_index(index_list)
-        sc_list = sc_list[:, new_index, :]
-        sc_list = self.format_output(sc_list)
 
-        return sc_list
+        new_index = self.get_reorder_index(index_list)
+
+        sc = sc[:, new_index]
+        sc = sc.T
+
+        print(sc)
+        return sc
 
 
 class KernelSetConv(BaseKernelSetConv):
-    def __init__(self, L, D, node_attr_dim, edge_attr_dim):
+    def __init__(self, L1, L2, L3, L4, D, node_attr_dim, edge_attr_dim):
 
-        self.L = L
+        self.L = [L1, L2, L3, L4]
 
     # test of std kernel
         p_support = torch.tensor([[1.2990e+00, 7.5000e-01]]).unsqueeze(0)
@@ -546,15 +549,15 @@ class KernelSetConv(BaseKernelSetConv):
                            x_center=x_center, edge_attr_support=edge_attr_support)
 
     #         kernel1 = KernelConv(init_kernel = kernel1_std)
-        kernel1 = KernelConv(L=L, D=D, num_supports=1,
+        kernel1 = KernelConv(L=L1, D=D, num_supports=1,
                              node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
-        kernel2 = KernelConv(L=L, D=D, num_supports=2,
+        kernel2 = KernelConv(L=L2, D=D, num_supports=2,
                              node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
 
     #         kernel3 = KernelConv(init_kernel = kernel3_std)
-        kernel3 = KernelConv(L=L, D=D, num_supports=3,
+        kernel3 = KernelConv(L=L3, D=D, num_supports=3,
                              node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
-        kernel4 = KernelConv(L=L, D=D, num_supports=4,
+        kernel4 = KernelConv(L=L4, D=D, num_supports=4,
                              node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
         super(KernelSetConv, self).__init__(kernel1, kernel2, kernel3, kernel4)
 
@@ -568,13 +571,14 @@ class KernelLayer(Module):
         a wrapper of KernelSetConv for clear input/output dimension, inputs:
         D: dimension
         L: number of KernelConvSet
+
+        the output will be of dimension L1+L2+L3+L4
     '''
 
-    def __init__(self, x_dim, p_dim, edge_dim, out_dim):
+    def __init__(self, x_dim, p_dim, edge_dim, L1, L2, L3, L4):
 
         super(KernelLayer, self).__init__()
-        self.conv = KernelSetConv(
-            L=out_dim, D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_dim)
+        self.conv = KernelSetConv(L1, L2, L3, L4, D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_dim)
 
     def forward(self, data):
         return self.conv(data=data)
