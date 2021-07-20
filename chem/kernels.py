@@ -563,7 +563,28 @@ class KernelSetConv(BaseKernelSetConv):
 
 
 class PredefinedKernelSetConv():
-    pass
+    def __init__(self, D, node_attr_dim, edge_attr_dim):
+
+        # generate functional kernels
+
+        # degree-1 kernels
+
+        # degree-2 kernels
+    alcohol_kernel = generate_kernel(D, 'CO[H]', 1)
+    alkyne_kernel = generate_kernel(D, 'C#C', 1)
+
+    #         kernel1 = KernelConv(init_kernel = kernel1_std)
+    kernel1 = KernelConv(L=L1, D=D, num_supports=1,
+                         node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
+    kernel2 = KernelConv(L=L2, D=D, num_supports=2,
+                         node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
+
+#         kernel3 = KernelConv(init_kernel = kernel3_std)
+    kernel3 = KernelConv(L=L3, D=D, num_supports=3,
+                         node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
+    kernel4 = KernelConv(L=L4, D=D, num_supports=4,
+                         node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
+    super(KernelSetConv, self).__init__(kernel1, kernel2, kernel3, kernel4)
 
 
 class KernelLayer(Module):
@@ -575,24 +596,30 @@ class KernelLayer(Module):
         the output will be of dimension L1+L2+L3+L4
     '''
 
-    def __init__(self, x_dim, p_dim, edge_dim, L1, L2, L3, L4):
+    def __init__(self, x_dim, p_dim, edge_dim, L1=None, L2=None, L3=None, L4=None, predined_kernelsets=True):
 
         super(KernelLayer, self).__init__()
-        self.conv = KernelSetConv(L1, L2, L3, L4, D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_dim)
+        if(predined_kernelsets == True):
+            self.conv = PredefinedKernelSetConv(D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_dim)
+        else:
+            if L1 is None or L2 is None or L3 is None or L4 is None:
+                raise Exception('KernelLayer(): if predined_kernelsets is false, then L1-L4 needs to be specified')
+            self.conv = KernelSetConv(L1, L2, L3, L4, D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_dim)
 
     def forward(self, data):
         return self.conv(data=data)
 
 
-def generate_kernel(D, typical_compound_smiles, center_atom_id):
-    '''
-    given a typical compound containing a certain kernal, and the center atom id, genrate the kernel, it is used to convert functional groups into kernels
-
-    '''
+def generate_kernel(D, typical_compound_smiles, center_atom_id, hop=1):
+    'given a typical compound containing a certain kernal, and the center atom id, genrate the kernel'
     if D == None:
         raise Exception('generate_kernel2grpah() needs to input D to specifiy 2D or 3D graph generation.')
 
-    mol = Chem.MolFromSmiles(smiles)
+    smiles = typical_compound_smiles.replace(r'/=', '=')
+    smiles = typical_compound_smiles.replace(r'\=', '=')
+
+    mol = Chem.MolFromSmiles(smiles, sanitize=False)
+    mol.UpdatePropertyCache(strict=False)
     mol = Chem.AddHs(mol)
 
     if D == 2:
@@ -663,5 +690,5 @@ def generate_kernel(D, typical_compound_smiles, center_atom_id):
 #     print(p_support)
 #     print('edge_attr_support')
 #     print(edge_attr_support)
-
-    return x_center, x_support, p_support, edge_attr_support
+    data = Data(x_center=x_center, x_support=x_support, p_support=p_support, edge_attr_support=edge_attr_support)
+    return data
