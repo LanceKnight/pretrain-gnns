@@ -271,7 +271,7 @@ class KernelConv(Module):
             edge_attr_neighbor = kwargv['edge_attr_neighbor']
 
         if(p_focal.shape[1] != self.p_support.shape[1]):
-            raise Exception(f'data coordinates is of {p_focal.shape[1]}D, but the kernel is {p_support.shape[1]}D')
+            raise Exception(f'data coordinates is of {p_focal.shape[1]}D, but the kernel is {self.p_support.shape[-1]}D')
 
 
 #         x, x_focal, p, edge_attr, edge_index = self.convert_graph_to_receptive_field(x, p, edge_index, edge_attr)
@@ -557,9 +557,6 @@ class KernelSetConv(BaseKernelSetConv):
         kernel4 = KernelConv(L=L, D=D, num_supports=4,
                              node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
         super(KernelSetConv, self).__init__(kernel1, kernel2, kernel3, kernel4)
-
-    def forward(self, *argv, **kwargv):
-        return forward(argv, kwargv)
 
 
 class PredefinedKernelSetConv():
