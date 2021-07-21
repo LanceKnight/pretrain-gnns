@@ -457,6 +457,7 @@ class BaseKernelSetConv(Module):
             headers += rand_names
         print(headers)
         sc_df = pd.DataFrame(sc_np, columns=headers)
+        sc_df = sc_df.transpose()
         sc_df.to_csv('scores.csv')
 
     def forward(self, *argv, **kwargv):
