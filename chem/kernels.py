@@ -65,6 +65,16 @@ functional_groups_1hop = {
 }
 
 
+# 1hop kernels - 2D
+kernels_1hop_2D = [
+    # degree1
+
+    # degree2
+    # alcohol_kernel = generate_1hop_kernel(D, functional_groups_1hop['alcohol'][0], functional_groups_1hop['alcohol'][1]),
+
+]
+
+
 class KernelConv(Module):
     def __init__(self, L=None, D=None, num_supports=None, node_attr_dim=None, edge_attr_dim=None, init_kernel=None, requires_grad=True):
         super(KernelConv, self).__init__()
@@ -239,15 +249,16 @@ class KernelConv(Module):
         # print(f'p_neighbor:{p_neighbor.shape}')
         # print(f'edge_attr_neighbor:{edge_attr_neighbor.shape}')
 
+        # because every sub-score is calculated using actan function, which peaks at pi/2, so this max_atn is used to normalized the score so it is in [0,1]
+        max_atan = torch.tensor([math.pi / 2], device=p_neighbor.device)
+
         # calculate the support attribute score
         permuted_x_support = self.permute(x_support)
 #         print(f'permuted_x_support:{permuted_x_support.shape}')
-        support_attr_sc = self.get_support_attribute_score(
-            x_neighbor, permuted_x_support)
+        support_attr_sc = self.get_support_attribute_score(x_neighbor, permuted_x_support) / max_atan
 #         print(f'support_attr_sc:{support_attr_sc}')
         # get the best support_attr_sc and its index
-        best_support_attr_sc, best_support_attr_sc_index = torch.max(
-            support_attr_sc, dim=1)
+        best_support_attr_sc, best_support_attr_sc_index = torch.max(support_attr_sc, dim=1)
 #         print(f'best_support_attr_sc:{best_support_attr_sc}, index:{best_support_attr_sc_index.shape}')
 #         print(f'index:{best_support_attr_sc_index}')
 
@@ -260,18 +271,18 @@ class KernelConv(Module):
             permuted_p_support.shape[0], 1, best_support_attr_sc_index.shape[-1], permuted_p_support.shape[3], permuted_p_support.shape[4])
         best_p_support = torch.gather(permuted_p_support, 1, selected_index)
 #         print(f'best_p_support:{best_p_support}')
-        angle_sc = self.get_angle_score(p_neighbor, best_p_support)
+        angle_sc = self.get_angle_score(p_neighbor, best_p_support) / max_atan
 #         print(f'angle_sc:{angle_sc}')
 
         # calculate length
         best_p_support = best_p_support.squeeze(1)
 #         print(f'best_p_support:{best_p_support.shape}')
-        length_sc = self.get_length_score(p_neighbor, best_p_support)
+        length_sc = self.get_length_score(p_neighbor, best_p_support) / max_atan
 #         print(f'length_sc:{length_sc.shape}')
 
         # calculate the center attribute score
 #         print(f'x_center:{x_center.shape}')
-        center_attr_sc = self.get_center_attribute_score(x_focal, x_center)
+        center_attr_sc = self.get_center_attribute_score(x_focal, x_center) / max_atan
 #         print(f'center_attr_sc:{center_attr_sc.shape}')
 
         # calculate the edge attribute score
@@ -286,8 +297,7 @@ class KernelConv(Module):
 #         print(f'best_edge_attr_support:{selected_index.shape}')
 #         print(f'edge_attr_neighbor:{edge_attr_neighbor.shape}')
 #         print(f'best_edge_attr_support:{best_edge_attr_support.shape}')
-        edge_attr_support_sc = self.get_edge_attribute_score(
-            edge_attr_neighbor, best_edge_attr_support)
+        edge_attr_support_sc = self.get_edge_attribute_score(edge_attr_neighbor, best_edge_attr_support) / max_atan
 #         print(f'edge_attr_support_sc:{edge_attr_support_sc.shape}')
 
 
@@ -299,16 +309,23 @@ class KernelConv(Module):
 #         edge_attr_support_sc = edge_attr_support_sc
 
         # the maxium value a arctain function can get
-        max_atan = torch.tensor([math.pi / 2], device=p_neighbor.device)
-        one = torch.tensor([1], device=p_neighbor.device)
 
+        one = torch.tensor([1], device=p_neighbor.device)
         sc = torch.atan(1 /
-                        (torch.square(length_sc - max_atan) +
-                         torch.square(angle_sc - max_atan) +
-                         torch.square(support_attr_sc - max_atan) +
-                         torch.square(center_attr_sc - max_atan) +
-                         torch.square(edge_attr_support_sc - max_atan)
+                        (torch.square(length_sc - one) +
+                         torch.square(angle_sc - one) +
+                         torch.square(support_attr_sc - one) +
+                         torch.square(center_attr_sc - one) +
+                         torch.square(edge_attr_support_sc - one)
                          )).squeeze(0)
+
+        # sc = torch.atan(1 /
+        #                 (torch.square(length_sc - max_atan) +
+        #                  torch.square(angle_sc - max_atan) +
+        #                  torch.square(support_attr_sc - max_atan) +
+        #                  torch.square(center_attr_sc - max_atan) +
+        #                  torch.square(edge_attr_support_sc - max_atan)
+        #                  )).squeeze(0)
         sc = sc / max_atan  # normalize the score to be in [0,1]
 #         print(f'cal total sc:{sc}')
 
@@ -338,12 +355,12 @@ class KernelConv(Module):
             x_focal, p_focal, x_neighbor, p_neighbor, edge_attr_neighbor)
 
         print('\n')
-        print(f'len sc:{length_sc.shape}')
-        print(f'angle sc:{angle_sc.shape}')
-        print(f'support attribute_sc:{supp_attr_sc.shape}')
-        print(f'center_attr_sc:{center_attr_sc.shape}')
-        print(f'edge attribute score:{edge_attr_support_sc.shape}')
-        print(f'total sc: {sc.shape}')
+        # print(f'len sc:{length_sc}')
+        print(f'angle sc:{angle_sc}')
+        # print(f'support attribute_sc:{supp_attr_sc}')
+        # print(f'center_attr_sc:{center_attr_sc}')
+        # print(f'edge attribute score:{edge_attr_support_sc}')
+        # print(f'total sc: {sc.shape}')
         return sc  # , length_sc, angle_sc, supp_attr_sc, center_attr_sc, edge_attr_support_sc
 
 
