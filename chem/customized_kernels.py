@@ -9,6 +9,7 @@ import rdkit
 from rdkit.Chem import AllChem
 
 import pandas as pd
+import os
 
 from loader import get_atom_rep
 
@@ -107,6 +108,14 @@ def read_kernel_from_csv(path):
     return kernel_dict
 
 
+def print_kernel_files():
+    root = 'customized_kernels'
+    files = os.listdir(root)
+    for file in files:
+        df = pd.read_csv(root + '/' + file)
+        print(df)
+
+
 # degree1
 hop1_degree1_functional_groups = read_kernel_from_csv('customized_kernels/customized_kernel1.csv')
 
@@ -199,5 +208,7 @@ if __name__ == '__main__':
     for lst in list_3D:
         for item in lst:
             print(item)
+
+    print_kernel_files()
 
     # read_kernel_from_csv('customized_kernels/customized_kernel1.csv')
