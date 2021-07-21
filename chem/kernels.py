@@ -11,6 +11,8 @@ from itertools import permutations
 import math
 import pandas as pd
 
+import os
+
 from customized_kernels import get_hop1_kernel_list
 
 
@@ -307,7 +309,9 @@ class BaseKernelSetConv(Module):
     def __init__(self, kernelconv1, kernelconv2, kernelconv3, kernelconv4):
         super(BaseKernelSetConv, self).__init__()
         self.kernelconv_set = ModuleList([kernelconv1, kernelconv2, kernelconv3, kernelconv4])
-        self.num_kernel_list = [kernelconv1.get_num_kernels(),  kernelconv2.get_num_kernels(), kernelconv3.get_num_kernels(), kernelconv4.get_num_kernels()]
+        self.L = [kernelconv1.get_num_kernels(), kernelconv2.get_num_kernels(), kernelconv3.get_num_kernels(), kernelconv4.get_num_kernels()]
+        self.num_kernel_list = [self.L[0], self.L[1], self.L[2], self.L[3]]
+
 #         kernel_set = ModuleList(
 #             [KernelConv(D=D, num_supports=1, node_attr_dim = node_attr_dim, edge_attr_dim = edge_attr_dim),
 #              KernelConv(D=D, num_supports=2, node_attr_dim = node_attr_dim, edge_attr_dim = edge_attr_dim),
@@ -440,6 +444,21 @@ class BaseKernelSetConv(Module):
         a = [output[i, :, :] for i in range(output.shape[0])]
         return torch.cat(a, dim=1)
 
+    def save_score(self, sc):
+        root = 'customized_kernels'
+        print('saving score...')
+        sc_np = sc.numpy()
+        files = os.listdir(root)
+        headers = []
+        for i, file in enumerate(files):
+            names = list(pd.read_csv(root + '/' + file)['name'])
+            headers += names
+            rand_names = ['rand_kernel'] * (self.L[i] - len(names))
+            headers += rand_names
+        print(headers)
+        sc_df = pd.DataFrame(sc_np, columns=headers)
+        sc_df.to_csv('scores.csv')
+
     def forward(self, *argv, **kwargv):
         '''
         inputs:
@@ -522,9 +541,7 @@ class BaseKernelSetConv(Module):
 
         print(sc)
         if(save_score == True):
-            sc_np = sc.numpy()
-            sc_df = pd.DataFrame(sc_np)
-            sc_df.to_csv('scores.csv')
+            self.save_score(sc)  # save scores for analysis
         return sc
 
 
