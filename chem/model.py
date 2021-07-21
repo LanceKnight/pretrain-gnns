@@ -57,7 +57,7 @@ class MolGCN(MessagePassing):
             p = kwargv['p']
             data = Data(x=x, p=p, edge_index=edge_index, edge_attr=edge_attr)
             # print(f'foward: data.x{data.x}')
-
+            save_score = kwargv['save_score']
         h = x
 
         for i in range(self.num_layers):
@@ -65,7 +65,7 @@ class MolGCN(MessagePassing):
             data.x = h
 
             kernel_layer = self.layers[i]
-            sim_sc = kernel_layer(data=data)
+            sim_sc = kernel_layer(data=data, save_score=save_score)
             # print(f'edge_index:{edge_index.device}, sim_sc:{sim_sc.device}')
             # print('sim_sc')
             # print(sim_sc)
@@ -153,7 +153,7 @@ class GNN_graphpred(torch.nn.Module):
             print(f'saving {i}th layer')
             torch.save(layer.state_dict(), f'{path}/{i}th_layer.pth')
 
-    def forward(self, *argv):
+    def forward(self, *argv, save_score=False):
         if len(argv) == 5:
             x, p, edge_index, edge_attr, batch = argv[0], argv[1], argv[2], argv[3], argv[4]
         elif len(argv) == 1:
@@ -162,7 +162,7 @@ class GNN_graphpred(torch.nn.Module):
         else:
             raise ValueError("unmatched number of arguments.")
 
-        node_representation = self.gnn(x=x, edge_index=edge_index, edge_attr=edge_attr, p=p)
+        node_representation = self.gnn(x=x, edge_index=edge_index, edge_attr=edge_attr, p=p, save_score=save_score)
         graph_representation = self.pool(node_representation, batch)
         pred = self.graph_pred_linear(graph_representation)
         # print(f'graph_rep:{graph_representation.shape}')
@@ -195,8 +195,10 @@ if __name__ == "__main__":
     model = GNN_graphpred(num_layers=1, num_kernel1=2, num_kernel2=3, num_kernel3=4, num_kernel4=2, x_dim=5, p_dim=D, edge_attr_dim=1, JK='last', drop_ratio=0.5, graph_pooling='mean')
 
     loader = DataLoader(dataset, batch_size=1)
+    save_score = True
     for data in loader:
-        out = model(data)
+        out = model(data, save_score=save_score)
+        save_score = False
 
     # model.save('saved_kernellayers')
 

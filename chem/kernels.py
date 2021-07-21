@@ -1,78 +1,17 @@
-# test of kernel with L
-
 from torch_geometric.nn import MessagePassing
 from torch_geometric.data import Data
 from torch_geometric.utils import degree
 
 import torch
-from torch.nn import ModuleList
-from torch.nn import CosineSimilarity, Module, ModuleList, Linear, Sigmoid
+from torch.nn import ModuleList, CosineSimilarity, Module, ModuleList, Linear, Sigmoid
+# from torch.nn import
 from torch.nn.parameter import Parameter
-
-from rdkit import Chem
-import rdkit
-# from rdkit import Chem
-# # from rdkit.Chem import Descriptors
-from rdkit.Chem import AllChem
 
 from itertools import permutations
 import math
+import pandas as pd
 
-from loader import get_atom_rep
-
-functional_groups_1hop = {
-    #'format:[representative smiles, center atom id]'
-    # degree1
-    'fluoride': ['CF', 1],
-    'cloride': ['CCl', 1],
-    'bromide': ['CBr', 1],
-    'iodide': ['CI', 1],
-
-
-    # degree2
-    'alcohol': ['CO[H]', 1],
-    'alkyne': ['CC#CC', 1],
-    'ether': ['COC', 1],
-    'nitrile': ['CC#N', 1],
-    'nitroso': ['CN=O', 1],
-    'thiol': ['CS[H]', 1],
-    'sulfide': ['CSC', 1],
-
-    # degree3
-    'alkene': ['CC=CC', 1],
-    'arene': ['Cc1ccccc1', 1],
-    'aldehyde': ['CC(=O)[H]', 1],
-    'ketone': ['CC(=O)C', 1],
-    'acyl_fluoride': ['CC(=O)F', 1],
-    'acyl_cloride': ['CC(=O)Cl', 1],
-    'acyl_bromide': ['CC(=O)Br', 1],
-    'acyl_iodide': ['CC(=O)I', 1],
-    'amine': ['C[N](C)C', 1],
-    'nitro': ['C[N](=O)O', 1],
-    'sulfoxide': ['C[S](C)=O', 1],
-    'thial': ['CC(=S)[H]', 1],
-    'thioketone': ['CC(=S)C', 1],
-    'phosphine': ['C[P](C)C', 1],
-
-
-    # degree4
-    'alkane_primary': ['CC', 1],
-    'alkane_secondary': ['CCC', 1],
-    'alkane_tertiary': ['C(C)(C)(C)[H]', 0],
-    'alkane_quaternary': ['C(C)(C)(C)C', 0],
-    'sulfone': ['C[S](C)(=O)=O', 1],
-    'sulfone': ['C[S](C)(=O)=O', 1]
-}
-
-
-# 1hop kernels - 2D
-kernels_1hop_2D = [
-    # degree1
-
-    # degree2
-    # alcohol_kernel = generate_1hop_kernel(D, functional_groups_1hop['alcohol'][0], functional_groups_1hop['alcohol'][1]),
-
-]
+from customized_kernels import get_hop1_kernel_list
 
 
 class KernelConv(Module):
@@ -357,8 +296,8 @@ class KernelConv(Module):
         print('\n')
         # print(f'len sc:{length_sc}')
         print(f'angle sc:{angle_sc}')
-        # print(f'support attribute_sc:{supp_attr_sc}')
-        # print(f'center_attr_sc:{center_attr_sc}')
+        print(f'support attribute_sc:{supp_attr_sc}')
+        print(f'center_attr_sc:{center_attr_sc}')
         # print(f'edge attribute score:{edge_attr_support_sc}')
         # print(f'total sc: {sc.shape}')
         return sc  # , length_sc, angle_sc, supp_attr_sc, center_attr_sc, edge_attr_support_sc
@@ -510,11 +449,12 @@ class BaseKernelSetConv(Module):
             raise Exception(
                 'Kernel does not take positional argument, use keyword argument instead. e.g. model(data=data)')
 
-        if len(kwargv) == 1:
+        if len(kwargv) == 2:
             x = kwargv['data'].x
             edge_index = kwargv['data'].edge_index
             edge_attr = kwargv['data'].edge_attr
             p = kwargv['data'].p
+            save_score = kwargv['save_score']
 
         else:
             x = kwargv['x']
@@ -581,6 +521,10 @@ class BaseKernelSetConv(Module):
         sc = sc.T
 
         print(sc)
+        if(save_score == True):
+            sc_np = sc.numpy()
+            sc_df = pd.DataFrame(sc_np)
+            sc_df.to_csv('scores.csv')
         return sc
 
 
@@ -635,11 +579,8 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
 
         # generate functional kernels
         # degree1 kernels
-        kernel1_list = []
-        fluoride_kernel = generate_1hop_kernel(D, functional_groups_1hop['fluoride'][0], functional_groups_1hop['fluoride'][1])
-        kernel1_list.append(fluoride_kernel)
-        cloride_kernel = generate_1hop_kernel(D, functional_groups_1hop['cloride'][0], functional_groups_1hop['cloride'][1])
-        kernel1_list.append(cloride_kernel)
+
+        kernel1_list = get_hop1_kernel_list(D)[0]
         if L1 is not None:
             rand_kernel1 = Data(x_center=torch.randn(L1, 1, node_attr_dim), x_support=torch.randn(L1, 1, node_attr_dim),
                                 edge_attr_support=torch.randn(L1, 1, edge_attr_dim), p_support=torch.randn(L1, 1, D))
@@ -649,13 +590,7 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
         print(f'Predefined1HopKernelSetConv: there are {self.kernel1.x_center.shape[0]} degree1 kernels')
 
         # degree2 kernels
-        kernel2_list = []
-        alcohol_kernel = generate_1hop_kernel(D, functional_groups_1hop['alcohol'][0], functional_groups_1hop['alcohol'][1])
-        kernel2_list.append(alcohol_kernel)
-        alkyne_kernel = generate_1hop_kernel(D, functional_groups_1hop['alkyne'][0], functional_groups_1hop['alkyne'][1])
-        kernel2_list.append(alkyne_kernel)
-        sulfide_kernel = generate_1hop_kernel(D, functional_groups_1hop['sulfide'][0], functional_groups_1hop['sulfide'][1])
-        kernel2_list.append(sulfide_kernel)
+        kernel2_list = get_hop1_kernel_list(D)[1]
         if L2 is not None:
             rand_kernel2 = Data(x_center=torch.randn(L2, 1, node_attr_dim), x_support=torch.randn(L2, 2, node_attr_dim),
                                 edge_attr_support=torch.randn(L2, 2, edge_attr_dim), p_support=torch.randn(L2, 2, D))
@@ -665,11 +600,7 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
         print(f'Predefined1HopKernelSetConv: there are {self.kernel2.x_center.shape[0]} degree2 kernels')
 
         # degree3 kernels
-        kernel3_list = []
-        alkene_kernel = generate_1hop_kernel(D, functional_groups_1hop['alkene'][0], functional_groups_1hop['alkene'][1])
-        kernel3_list.append(alkene_kernel)
-        arene_kernel = generate_1hop_kernel(D, functional_groups_1hop['arene'][0], functional_groups_1hop['arene'][1])
-        kernel3_list.append(arene_kernel)
+        kernel3_list = get_hop1_kernel_list(D)[2]
         if L3 is not None:
             rand_kernel3 = Data(x_center=torch.randn(L3, 1, node_attr_dim), x_support=torch.randn(L3, 3, node_attr_dim),
                                 edge_attr_support=torch.randn(L3, 3, edge_attr_dim), p_support=torch.randn(L3, 3, D))
@@ -679,17 +610,7 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
         print(f'Predefined1HopKernelSetConv: there are {self.kernel3.x_center.shape[0]} degree3 kernels')
 
         # degree4 kernels
-        kernel4_list = []
-        alkane_primary_kernel = generate_1hop_kernel(D, functional_groups_1hop['alkane_primary'][0], functional_groups_1hop['alkane_primary'][1])
-        kernel4_list.append(alkane_primary_kernel)
-        alkane_secondary_kernel = generate_1hop_kernel(D, functional_groups_1hop['alkane_secondary'][0], functional_groups_1hop['alkane_secondary'][1])
-        kernel4_list.append(alkane_secondary_kernel)
-        alkane_tertiary_kernel = generate_1hop_kernel(D, functional_groups_1hop['alkane_tertiary'][0], functional_groups_1hop['alkane_tertiary'][1])
-        kernel4_list.append(alkane_tertiary_kernel)
-        alkane_quaternary_kernel = generate_1hop_kernel(D, functional_groups_1hop['alkane_quaternary'][0], functional_groups_1hop['alkane_quaternary'][1])
-        kernel4_list.append(alkane_quaternary_kernel)
-        sulfone_kernel = generate_1hop_kernel(D, functional_groups_1hop['sulfone'][0], functional_groups_1hop['sulfone'][1])
-        kernel4_list.append(sulfone_kernel)
+        kernel4_list = get_hop1_kernel_list(D)[3]
         if L4 is not None:
             rand_kernel4 = Data(x_center=torch.randn(L4, 1, node_attr_dim), x_support=torch.randn(L4, 4, node_attr_dim),
                                 edge_attr_support=torch.randn(L4, 4, edge_attr_dim), p_support=torch.randn(L4, 4, D))
@@ -697,7 +618,7 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
         self.kernel4 = self.cat_kernels(kernel4_list)
         kernelconv4 = KernelConv(init_kernel=self.kernel4, requires_grad=False)
         print(f'Predefined1HopKernelSetConv: there are {self.kernel4.x_center.shape[0]} degree4 kernels')
-        print(kernelconv1.get_num_kernels())
+        # print(kernelconv1.get_num_kernels())
         super(Predefined1HopKernelSetConv, self).__init__(kernelconv1, kernelconv2, kernelconv3, kernelconv4)
 
     def cat_kernels(self, kernel_list):
@@ -743,95 +664,8 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
 #         return self.conv(data=data)
 
 
-def generate_1hop_kernel(D, typical_compound_smiles, center_atom_id, hops=1):
-    #     '''
-    #     given a typical compound containing a certain kernal, and the center atom id, genrate the kernel
-    #     '''
-    if D == None:
-        raise Exception('generate_kernel2grpah() needs to input D to specifiy 2D or 3D graph generation.')
-
-    smiles = typical_compound_smiles.replace(r'/=', '=')
-    smiles = typical_compound_smiles.replace(r'\=', '=')
-
-    mol = Chem.MolFromSmiles(smiles, sanitize=False)
-    mol.UpdatePropertyCache(strict=False)
-    mol = Chem.AddHs(mol)
-
-    if D == 2:
-        Chem.rdDepictor.Compute2DCoords(mol)
-    if D == 3:
-        AllChem.EmbedMolecule(mol)
-        AllChem.UFFOptimizeMolecule(mol)
-
-    conf = mol.GetConformer()
-
-    all_atoms = mol.GetAtoms()
-    center_atom = all_atoms[center_atom_id]
-    # print(f'center atom:{center_atom.GetSymbol()}')
-
-    atom_pos = []
-    atom_attr = []
-
-    supports = center_atom.GetNeighbors()
-
-    x_center = get_atom_rep(center_atom.GetAtomicNum())
-
-    p_list = []
-    x_list = []
-    bond_attr_list = []
-    # print()
-    # print('atom idx:')
-    # for i, atom in enumerate(all_atoms):
-    #     print(f'{atom.GetIdx()}, {atom.GetSymbol()}')
-
-    for idx, edge in enumerate(center_atom.GetBonds()):
-        support_start_id = edge.GetBeginAtomIdx()
-        support_end_id = edge.GetEndAtomIdx()
-#         print(f'support_start_id:{support_start_id}')
-#         print(f'support_end_id:{support_end_id}')
-        if (support_start_id == center_atom_id):
-            support_id = support_end_id
-        else:
-            support_id = support_start_id
-        support = all_atoms[support_id]
-        x_list.append(get_atom_rep(support.GetAtomicNum()))
-        if D == 2:
-            p_support = p_list.append([conf.GetAtomPosition(support_id).x - conf.GetAtomPosition(center_atom_id).x, conf.GetAtomPosition(support_id).y - conf.GetAtomPosition(center_atom_id).y])
-        if D == 3:
-            p_support = p_list.append([conf.GetAtomPosition(support_id).x - conf.GetAtomPosition(center_atom_id).x, conf.GetAtomPosition(support_id).y -
-                                       conf.GetAtomPosition(center_atom_id).y, conf.GetAtomPosition(support_id).z - conf.GetAtomPosition(center_atom_id).z])
-
-        bond_attr = None
-        bond_type = edge.GetBondType()
-        if bond_type == Chem.rdchem.BondType.SINGLE:
-            bond_attr = [1]
-        elif bond_type == Chem.rdchem.BondType.DOUBLE:
-            bond_attr = [2]
-        elif bond_type == Chem.rdchem.BondType.TRIPLE:
-            bond_attr = [3]
-        elif bond_type == Chem.rdchem.BondType.AROMATIC:
-            bond_attr = [4]
-        bond_attr_list.append(bond_attr)
-
-    x_center = torch.tensor(x_center).unsqueeze(0).unsqueeze(0)
-    x_support = torch.tensor(x_list).unsqueeze(0)
-    p_support = torch.tensor(p_list).unsqueeze(0)
-    edge_attr_support = torch.tensor(bond_attr_list, dtype=p_support.dtype).unsqueeze(0)
-
-#     print('x_center')
-#     print(x_center)
-#     print('x_support')
-#     print(x_support)
-#     print('p_support')
-#     print(p_support)
-#     print('edge_attr_support')
-#     print(edge_attr_support)
-    data = Data(x_center=x_center, x_support=x_support, p_support=p_support, edge_attr_support=edge_attr_support)
-    return data  # x_center, x_support, p_support, edge_attr_support
-
-
 if __name__ == "__main__":
     print('testing')
     model = Predefined1HopKernelSetConv(D=2, node_attr_dim=5, edge_attr_dim=1)
-    num = model.num_total_kernels()
+    num = model.get_num_kernel()
     print(num)
