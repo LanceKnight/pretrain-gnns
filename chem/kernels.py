@@ -60,7 +60,7 @@ functional_groups_1hop = {
     'alkane_secondary': ['CCC', 1],
     'alkane_tertiary': ['C(C)(C)(C)[H]', 0],
     'alkane_quaternary': ['C(C)(C)(C)C', 0],
-    'sulfone': ['C[S](C)(=O)=O', 1]
+    'sulfone': ['C[S](C)(=O)=O', 1],
     'sulfone': ['C[S](C)(=O)=O', 1]
 }
 
@@ -309,6 +309,7 @@ class KernelConv(Module):
                          torch.square(center_attr_sc - max_atan) +
                          torch.square(edge_attr_support_sc - max_atan)
                          )).squeeze(0)
+        sc = sc / max_atan  # normalize the score to be in [0,1]
 #         print(f'cal total sc:{sc}')
 
         return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, edge_attr_support_sc
@@ -662,8 +663,14 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
 
         # degree4 kernels
         kernel4_list = []
-        alkane_kernel = generate_1hop_kernel(D, functional_groups_1hop['alkane'][0], functional_groups_1hop['alkane'][1])
-        kernel4_list.append(alkane_kernel)
+        alkane_primary_kernel = generate_1hop_kernel(D, functional_groups_1hop['alkane_primary'][0], functional_groups_1hop['alkane_primary'][1])
+        kernel4_list.append(alkane_primary_kernel)
+        alkane_secondary_kernel = generate_1hop_kernel(D, functional_groups_1hop['alkane_secondary'][0], functional_groups_1hop['alkane_secondary'][1])
+        kernel4_list.append(alkane_secondary_kernel)
+        alkane_tertiary_kernel = generate_1hop_kernel(D, functional_groups_1hop['alkane_tertiary'][0], functional_groups_1hop['alkane_tertiary'][1])
+        kernel4_list.append(alkane_tertiary_kernel)
+        alkane_quaternary_kernel = generate_1hop_kernel(D, functional_groups_1hop['alkane_quaternary'][0], functional_groups_1hop['alkane_quaternary'][1])
+        kernel4_list.append(alkane_quaternary_kernel)
         sulfone_kernel = generate_1hop_kernel(D, functional_groups_1hop['sulfone'][0], functional_groups_1hop['sulfone'][1])
         kernel4_list.append(sulfone_kernel)
         if L4 is not None:
@@ -682,8 +689,8 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
         p_support_list = [kernel.p_support for kernel in kernel_list]
         edge_attr_support_list = [kernel.edge_attr_support for kernel in kernel_list]
 
-        for x_center in x_center_list:
-            print(x_center.shape)
+        # for x_center in x_center_list:
+        #     print(x_center.shape)
         x_center = torch.cat(x_center_list)
         x_support = torch.cat(x_support_list)
         p_support = torch.cat(p_support_list)
