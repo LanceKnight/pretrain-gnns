@@ -1,21 +1,21 @@
 import os
 import torch
-import pickle
-import collections
-import math
+# import pickle
+# import collections
+# import math
 import pandas as pd
 import numpy as np
-import networkx as nx
+# import networkx as nx
 from rdkit import Chem
-from rdkit.Chem import Descriptors
+# from rdkit.Chem import Descriptors
 from rdkit.Chem import AllChem
-from rdkit import DataStructs
+# from rdkit import DataStructs
 from rdkit.Chem.rdMolDescriptors import GetMorganFingerprintAsBitVect
 from torch.utils import data
 from torch_geometric.data import Data
 from torch_geometric.data import InMemoryDataset
-from torch_geometric.data import Batch
-from itertools import repeat, product, chain
+# from torch_geometric.data import Batch
+# from itertools import repeat, product, chain
 from tqdm import tqdm
 
 
@@ -210,53 +210,27 @@ class MoleculeDataset(InMemoryDataset):
         data_smiles_list = []
         data_list = []
 
-        if self.dataset == 'adrb2_vae':
-            smiles_lists = []
-            data_list = []
-            data_smiles_list = []
-
-            for file, label, type_ in [('AID492947_active_T.smi', 1, 'train'),
-                                       ('AID492947_active_V.smi', 1, 'val'),
-                                       ('AID492947_inactive_T.smi', 0, 'train'),
-                                       ('AID492947_inactive_V.smi', 0, 'val')]:
-                smiles_path = os.path.join(self.root, 'raw', file)
-                smiles_list = pd.read_csv(smiles_path, sep=' ', header=None)[0]
-                # labels = [label]* len(smiles_list)
-                # types = [type_] * len(smiles_list)
-
-                for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
-                    smi = smiles_list[i]
-
-                    data = smiles2graph(2, smi)
-                    data.id = torch.tensor([i])
-                    data.y = torch.tensor([label])
-                    data.type = type_
-                    data.smiles = smi
-                    # print(data)
-                    data_list.append(data)
-                    data_smiles_list.append(smiles_list[i])
-        elif self.dataset == '435008':
-            for file, label in [(f'{self.dataset}_actives.smi', 1),
-                                (f'{self.dataset}_inactives.smi', 0)]:
-                smiles_path = os.path.join(self.root, 'raw', file)
-                smiles_list = pd.read_csv(
-                    smiles_path, sep='\t', header=None)[0]
-
-                for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
-                    smi = smiles_list[i]
-
-                    data = smiles2graph(2, smi)
-                    if data is None:
-                        continue
-                    data.id = torch.tensor([i])
-                    data.y = torch.tensor([label])
-                    data.smiles = smi
-                    # print(data)
-                    data_list.append(data)
-                    data_smiles_list.append(smiles_list[i])
-
-        else:
+        if dataset not in ['435008', '1798']:
             raise ValueError('Invalid dataset name')
+
+        for file, label in [(f'{self.dataset}_actives.smi', 1),
+                            (f'{self.dataset}_inactives.smi', 0)]:
+            smiles_path = os.path.join(self.root, 'raw', file)
+            smiles_list = pd.read_csv(
+                smiles_path, sep='\t', header=None)[0]
+
+            for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
+                smi = smiles_list[i]
+
+                data = smiles2graph(2, smi)
+                if data is None:
+                    continue
+                data.id = torch.tensor([i])
+                data.y = torch.tensor([label])
+                data.smiles = smi
+                # print(data)
+                data_list.append(data)
+                data_smiles_list.append(smiles_list[i])
 
         if self.pre_filter is not None:
             data_list = [data for data in data_list if self.pre_filter(data)]
@@ -266,9 +240,7 @@ class MoleculeDataset(InMemoryDataset):
 
         # write data_smiles_list in processed paths
         data_smiles_series = pd.Series(data_smiles_list)
-        data_smiles_series.to_csv(os.path.join(self.processed_dir,
-                                               'smiles.csv'), index=False,
-                                  header=False)
+        data_smiles_series.to_csv(os.path.join(self.processed_dir, f'{self.dataset}-smiles.csv'), index=False, header=False)
 
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
@@ -372,12 +344,12 @@ def create_circular_fingerprint(mol, radius, size, chirality):
 # test MoleculeDataset object
 if __name__ == "__main__":
     print('testing...')
-    dataset = '435008'
+    dataset = '1798'
     # windows
     root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
     # linux
     # root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
-    if dataset == '435008':
+    if dataset == '435008' or '1798':
         root += 'qsar_benchmark2015'
         dataset = dataset
     else:
