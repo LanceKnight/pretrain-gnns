@@ -126,8 +126,10 @@ def main():
                         help='weight decay (default: 0)')
     parser.add_argument('--num_layers', type=int, default=5,
                         help='number of GNN message passing layers (default: 5).')
-    parser.add_argument('--num_kernelsets', type=int, default=15, help='number of kernelsets (default: 15).')
-
+    parser.add_argument('--num_kernel1', type=int, default=10, help='number of kernel of degree1 (default: 10).')
+    parser.add_argument('--num_kernel2', type=int, default=10, help='number of kernel of degree2 (default: 10).')
+    parser.add_argument('--num_kernel3', type=int, default=10, help='number of kernel of degree3 (default: 10).')
+    parser.add_argument('--num_kernel4', type=int, default=10, help='number of kernel of degree4 (default: 10).')
     parser.add_argument('--dropout_ratio', type=float, default=0.5,
                         help='dropout ratio (default: 0.5)')
     parser.add_argument('--graph_pooling', type=str, default="mean",
@@ -219,10 +221,10 @@ def main():
     print('data loaded!')
 
     # ==========set up model==========
-    model = GNN_graphpred(num_layers=args.num_layers, num_kernelsets=args.num_kernelsets, x_dim=5, p_dim=D,
+    model = GNN_graphpred(num_layers=args.num_layers, num_kernel1=args.num_kernel1, num_kernel2=args.num_kernel2, num_kernel3=args.num_kernel3, num_kernel4=args.num_kernel4, x_dim=5, p_dim=D,
                           edge_attr_dim=1, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling)
     # check model size
-    # print_model_size(model)
+    print_model_size(model)
 
     if not args.input_model_file == "":
         model.from_pretrained(args.input_model_file)

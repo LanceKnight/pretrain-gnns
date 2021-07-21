@@ -23,7 +23,7 @@ class MolGCN(MessagePassing):
             kernel_layer = KernelSetConv(num_kernel1, num_kernel2, num_kernel3, num_kernel4, D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_dim)
             num_kernels = num_kernel1 + num_kernel2 + num_kernel3 + num_kernel4
         elif (predined_kernelsets == True):
-            kernel_layer = Predefined1HopKernelSetConv(D, x_dim, edge_attr_dim, L1=num_kernel1, L2=num_kernel2, L3=num_kernel3, L4=num_kernel4)
+            kernel_layer = Predefined1HopKernelSetConv(D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_attr_dim, L1=num_kernel1, L2=num_kernel2, L3=num_kernel3, L4=num_kernel4)
             num_kernels = kernel_layer.get_num_kernel()
         else:
             raise Exception('MolGCN: num_kernel1-4 need to be specified')
@@ -32,10 +32,10 @@ class MolGCN(MessagePassing):
         self.num_kernerls_list.append(num_kernels)
 
         # second_layer
-        x_dim = num_kernels
-        for i in range(num_layers - 1):
-            kernel_layer = KernelLayer(x_dim, p_dim, edge_attr_dim, num_kernel1, num_kernel2, num_kernel3, num_kernel4)
-            self.layers.append(kernel_layer)
+        # x_dim = num_kernels
+        # for i in range(num_layers - 1):
+        #     kernel_layer = KernelLayer(x_dim, p_dim, edge_attr_dim, num_kernel1, num_kernel2, num_kernel3, num_kernel4)
+        #     self.layers.append(kernel_layer)
 
     def num_kernels(self, layer):
         return self.num_kernerls_list[layer]
