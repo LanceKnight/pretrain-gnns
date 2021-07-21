@@ -24,7 +24,7 @@ class MolGCN(MessagePassing):
             num_kernels = num_kernel1 + num_kernel2 + num_kernel3 + num_kernel4
         elif (predined_kernelsets == True):
             kernel_layer = Predefined1HopKernelSetConv(D, x_dim, edge_attr_dim, L1=num_kernel1, L2=num_kernel2, L3=num_kernel3, L4=num_kernel4)
-            num_kernels = kernel_layer.num_total_kernels()
+            num_kernels = kernel_layer.get_num_kernel()
         else:
             raise Exception('MolGCN: num_kernel1-4 need to be specified')
 
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     dataset = dataset[234:236]
 
     # model = MolGCN(num_layers = 2, num_kernel_layers = 2, x_dim = 5, p_dim =3, edge_attr_dim = 1)
-    model = GNN_graphpred(num_layers=1, num_kernel1=5, num_kernel2=6, num_kernel3=7, num_kernel4=8, x_dim=5, p_dim=D, edge_attr_dim=1, JK='last', drop_ratio=0.5, graph_pooling='mean')
+    model = GNN_graphpred(num_layers=1, num_kernel1=2, num_kernel2=3, num_kernel3=4, num_kernel4=2, x_dim=5, p_dim=D, edge_attr_dim=1, JK='last', drop_ratio=0.5, graph_pooling='mean')
 
     loader = DataLoader(dataset, batch_size=1)
     for data in loader:
