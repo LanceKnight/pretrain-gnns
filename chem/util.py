@@ -308,6 +308,7 @@ def print_model_size(model):
     num_layer_param = 0
     for name, param in model.state_dict().items():
         name_segments = name.split('.')
+        # for kernelcov layer
         if(len(name_segments) > 2):
             layer_num = name_segments[2]
 
@@ -315,9 +316,12 @@ def print_model_size(model):
                 previous_layer_num = layer_num
                 print(f'num_layer_param:{num_layer_param}')
                 num_layer_param = 0
-
             num_layer_param += param.nelement()
             print(f'param name:{name}, shape:{param.shape}, nelement:{param.nelement()}')
+        # for linear prediction layer
+        else:
+            print(f'param name:{name}, shape:{param.shape}, nelement:{param.nelement()}')
+
     print(f'num_layer_param:{num_layer_param}')
 
 
