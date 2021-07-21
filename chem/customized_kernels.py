@@ -8,6 +8,8 @@ import rdkit
 # # from rdkit.Chem import Descriptors
 from rdkit.Chem import AllChem
 
+import pandas as pd
+
 from loader import get_atom_rep
 
 
@@ -98,25 +100,18 @@ def generate_1hop_kernel(D, typical_compound_smiles, center_atom_id, hops=1):
     return data  # x_center, x_support, p_support, edge_attr_support
 
 
+def read_kernel_from_csv(path):
+    df = pd.read_csv(path, index_col=0)
+    df = df.transpose()
+    kernel_dict = df.to_dict(orient='list')
+    return kernel_dict
+
+
 # degree1
-hop1_degree1_functional_groups = {
-    #'format:[representative smiles, center atom id]'
-    'fluoride': ['CF', 1],
-    'cloride': ['CCl', 1],
-    'bromide': ['CBr', 1],
-    'iodide': ['CI', 1],
-}
+hop1_degree1_functional_groups = read_kernel_from_csv('customized_kernels/customized_kernel1.csv')
 
 # degree2
-hop1_degree2_functional_groups = {
-    'alcohol': ['CO[H]', 1],
-    'alkyne': ['CC#CC', 1],
-    'ether': ['COC', 1],
-    'nitrile': ['CC#N', 1],
-    'nitroso': ['CN=O', 1],
-    'thiol': ['CS[H]', 1],
-    'sulfide': ['CSC', 1],
-}
+hop1_degree2_functional_groups = read_kernel_from_csv('customized_kernels/customized_kernel2.csv')
 
 
 # degree3
@@ -204,3 +199,5 @@ if __name__ == '__main__':
     for lst in list_3D:
         for item in lst:
             print(item)
+
+    # read_kernel_from_csv('customized_kernels/customized_kernel1.csv')
