@@ -18,6 +18,9 @@ from torch_geometric.data import InMemoryDataset
 # from itertools import repeat, product, chain
 from tqdm import tqdm
 
+# this pattern_dict is used for cleaning some smiles that cannot be processed by rdkit
+pattern_dict = {'[NH-]': '[N-]'}
+
 def generate_element_rep_list(elements):
 
     print('calculating rdkit element representation lookup table')
@@ -98,11 +101,15 @@ def smiles2graph(D, smiles):
     try:
         mol = Chem.MolFromSmiles(smiles, sanitize=True)
     except Exception as e:
-        print(f'{e}, smiles:{smiles}')
+        print(f'Cannot generate mol, error:{e}, smiles:{smiles}')
+
     if mol is None:
-        # raise Exception(f'mol is None. smiles:{smiles}')
-        print(f'mol is None. smiles:{smiles}')
-        return None
+        smiles = smiles_cleaner(smiles)
+        try:
+            mol = Chem.MolFromSmiles(smiles, sanitize=True)
+        except Exception as e:
+            print(f'Generated mol is None, error:{e}, smiles:{smiles}')
+            return None
     try:
         # mol.UpdatePropertyCache(strict=False)
         mol = Chem.AddHs(mol)
@@ -220,7 +227,7 @@ class MoleculeDataset(InMemoryDataset):
         data_smiles_list = []
         data_list = []
 
-        if dataset not in ['435008', '1798']:
+        if self.dataset not in ['435008', '1798']:
             raise ValueError('Invalid dataset name')
 
         for file, label in [(f'{self.dataset}_actives.smi', 1),
@@ -350,15 +357,28 @@ def create_circular_fingerprint(mol, radius, size, chirality):
     return np.array(fp)
 
 
+def smiles_cleaner(smiles):
+    '''
+    this function is to clean smiles for some known issues that makes rdkit:Chem.MolFromSmiles not working
+    '''
+    print('fixing smiles for rdkit...')
+    new_smiles = smiles
+    for pattern, replace_value in pattern_dict.items():
+        if pattern in smiles:
+            print('found pattern and fixed the smiles!')
+            new_smiles = smiles.replace(pattern, replace_value)
+    return new_smiles
+
+
 
 # test MoleculeDataset object
 if __name__ == "__main__":
     print('testing...')
-    dataset = '1798'
+    dataset = '435008'
     # windows
-    root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
+    # root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
     # linux
-    # root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
+    root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
     if dataset == '435008' or '1798':
         root += 'qsar_benchmark2015'
         dataset = dataset
