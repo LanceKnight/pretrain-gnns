@@ -306,11 +306,26 @@ class KernelConv(Module):
 
 
 class BaseKernelSetConv(Module):
-    def __init__(self, kernelconv1, kernelconv2, kernelconv3, kernelconv4):
+    # , trainable_kernelconv2=None, trainable_kernelconv3=None, trainable_kernelconv4=None, ):
+    def __init__(self, fixed_kernelconv1=None, fixed_kernelconv2=None, fixed_kernelconv3=None, fixed_kernelconv4=None, trainable_kernelconv1=None, trainable_kernelconv2=None, trainable_kernelconv3=None, trainable_kernelconv4=None):
         super(BaseKernelSetConv, self).__init__()
-        self.kernelconv_set = ModuleList([kernelconv1, kernelconv2, kernelconv3, kernelconv4])
-        self.L = [kernelconv1.get_num_kernels(), kernelconv2.get_num_kernels(), kernelconv3.get_num_kernels(), kernelconv4.get_num_kernels()]
-        self.num_kernel_list = [self.L[0], self.L[1], self.L[2], self.L[3]]
+        if (fixed_kernelconv1 is not None) and (fixed_kernelconv2 is not None) and (fixed_kernelconv3 is not None) and (fixed_kernelconv4 is not None):
+            self.fixed_kernelconv_set = ModuleList([fixed_kernelconv1, fixed_kernelconv2, fixed_kernelconv3, fixed_kernelconv4])
+            self.num_fixed_kernel_list = [fixed_kernelconv1.get_num_kernels(), fixed_kernelconv2.get_num_kernels(), fixed_kernelconv3.get_num_kernels(), fixed_kernelconv4.get_num_kernels()]
+        else:
+            self.fixed_kernelconv_set = ModuleList([])
+            self.num_fixed_kernel_list = []
+
+        if (trainable_kernelconv1 is not None) and  (trainable_kernelconv2 is not None) and  (trainable_kernelconv3 is not None) and  (trainable_kernelconv4 is not None)  :
+            self.trainable_kernelconv_set = ModuleList([trainable_kernelconv1, trainable_kernelconv2, trainable_kernelconv3, trainable_kernelconv4 ])  # , trainable_kernelconv2, trainable_kernelconv3, trainable_kernelconv4])
+            self.num_trainable_kernel_list = [trainable_kernelconv1.get_num_kernels(), trainable_kernelconv2.get_num_kernels(), trainable_kernelconv3.get_num_kernels(), trainable_kernelconv4.get_num_kernels()]
+
+        else:
+            self.trainable_kernelconv_set= ModuleList([])
+            self.num_trainable_kernel_list = []
+
+        print(f'num_train:{len(self.num_trainable_kernel_list)} fix:{len(self.num_fixed_kernel_list)}')
+        self.num_kernel_list = [self.num_fixed_kernel_list[i] + self.num_trainable_kernel_list[i] for i in range(4)] # num of kernels for each degree, combining both fixed and trainable kerenls
 
 #         kernel_set = ModuleList(
 #             [KernelConv(D=D, num_supports=1, node_attr_dim = node_attr_dim, edge_attr_dim = edge_attr_dim),
@@ -447,13 +462,13 @@ class BaseKernelSetConv(Module):
     def save_score(self, sc):
         root = 'customized_kernels'
         print('saving score...')
-        sc_np = sc.numpy()
+        sc_np = sc.cpu().detach().numpy()
         files = os.listdir(root)
         headers = []
         for i, file in enumerate(files):
             names = list(pd.read_csv(root + '/' + file)['name'])
             headers += names
-            rand_names = ['rand_kernel'] * (self.L[i] - len(names))
+            rand_names = ['std_kernel'] * self.num_trainable_kernel_list[i]
             headers += rand_names
         print(headers)
         sc_df = pd.DataFrame(sc_np, columns=headers)
@@ -520,9 +535,12 @@ class BaseKernelSetConv(Module):
 #             print(p_neighbor)
 #             print('edge_attr_neighbor')
 #             print(edge_attr_neighbor)
-                sc = self.kernelconv_set[deg - 1](data=data)
+                fixed_sc = self.fixed_kernelconv_set[deg - 1](data=data)
+                trainable_sc = self.trainable_kernelconv_set[deg - 1](data=data)
 
-                zeros[start_row_id:start_row_id + self.num_kernel_list[deg - 1], start_col_id:start_col_id + x_focal.shape[0]] = sc
+                sc = torch.cat([fixed_sc, trainable_sc])
+                print(f'num_kernel_list:{self.num_kernel_list}')
+                zeros[start_row_id:start_row_id + self.num_kernel_list[deg - 1], start_col_id:start_col_id + x_focal.shape[0]]= sc
 
                 index_list.append(selected_index)
                 start_row_id += self.num_kernel_list[deg - 1]
@@ -598,46 +616,58 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
         # generate functional kernels
         # degree1 kernels
 
-        kernel1_list = get_hop1_kernel_list(D)[0]
+        fixed_kernel1_list = get_hop1_kernel_list(D)[0]
+        trainable_kernel1_list = [fixed_kernel1_list[0]]  # get the first one in fixed_kernel as the starting kernel as a list
         if L1 is not None:
-            rand_kernel1 = Data(x_center=torch.randn(L1, 1, node_attr_dim), x_support=torch.randn(L1, 1, node_attr_dim),
-                                edge_attr_support=torch.randn(L1, 1, edge_attr_dim), p_support=torch.randn(L1, 1, D))
-            kernel1_list.append(rand_kernel1)
-        self.kernel1 = self.cat_kernels(kernel1_list)
-        kernelconv1 = KernelConv(init_kernel=self.kernel1, requires_grad=False)
-        print(f'Predefined1HopKernelSetConv: there are {self.kernel1.x_center.shape[0]} degree1 kernels')
+            trainable_kernel1_list *= L1  # duplicate the one-member list to have L1 members
+            self.trainable_kernel1 = self.cat_kernels(trainable_kernel1_list) # generate a single tensor with L as the first dimension from the list
+            trainable_kernelconv1 = KernelConv(init_kernel=self.trainable_kernel1, requires_grad=True) # generate the trainable KernelConv
+        else:
+            trainable_kernelconv1 = None
+        self.fixed_kernel1 = self.cat_kernels(fixed_kernel1_list)
+        fixed_kernelconv1 = KernelConv(init_kernel=self.fixed_kernel1, requires_grad=False)
+        print(f'Predefined1HopKernelSetConv: there are {self.fixed_kernel1.x_center.shape[0]} degree1 fixed kernels, {L1} degree1 trainable kernels')
 
         # degree2 kernels
-        kernel2_list = get_hop1_kernel_list(D)[1]
+        fixed_kernel2_list = get_hop1_kernel_list(D)[1]
+        trainable_kernel2_list = [fixed_kernel2_list[0]]  # get the first one in fixed_kernel as the starting kernel as a list
         if L2 is not None:
-            rand_kernel2 = Data(x_center=torch.randn(L2, 1, node_attr_dim), x_support=torch.randn(L2, 2, node_attr_dim),
-                                edge_attr_support=torch.randn(L2, 2, edge_attr_dim), p_support=torch.randn(L2, 2, D))
-            kernel2_list.append(rand_kernel2)
-        self.kernel2 = self.cat_kernels(kernel2_list)
-        kernelconv2 = KernelConv(init_kernel=self.kernel2, requires_grad=False)
-        print(f'Predefined1HopKernelSetConv: there are {self.kernel2.x_center.shape[0]} degree2 kernels')
+            trainable_kernel2_list *= L2  # duplicate the one-member list to have L2 members
+            self.trainable_kernel2 = self.cat_kernels(trainable_kernel2_list) # generate a single tensor with L as the first dimension from the list
+            trainable_kernelconv2 = KernelConv(init_kernel=self.trainable_kernel2, requires_grad=True) # generate the trainable KernelConv
+        else:
+            trainable_kernelconv2 = None
+        self.fixed_kernel2 = self.cat_kernels(fixed_kernel2_list)
+        fixed_kernelconv2 = KernelConv(init_kernel=self.fixed_kernel2, requires_grad=False)
+        print(f'Predefined1HopKernelSetConv: there are {self.fixed_kernel2.x_center.shape[0]} degree2 fixed kernels, {L2} degree2 trainable kernels')
 
         # degree3 kernels
-        kernel3_list = get_hop1_kernel_list(D)[2]
+        fixed_kernel3_list = get_hop1_kernel_list(D)[2]
+        trainable_kernel3_list = [fixed_kernel3_list[0]]  # get the first one in fixed_kernel as the starting kernel as a list
         if L3 is not None:
-            rand_kernel3 = Data(x_center=torch.randn(L3, 1, node_attr_dim), x_support=torch.randn(L3, 3, node_attr_dim),
-                                edge_attr_support=torch.randn(L3, 3, edge_attr_dim), p_support=torch.randn(L3, 3, D))
-            kernel3_list.append(rand_kernel3)
-        self.kernel3 = self.cat_kernels(kernel3_list)
-        kernelconv3 = KernelConv(init_kernel=self.kernel3, requires_grad=False)
-        print(f'Predefined1HopKernelSetConv: there are {self.kernel3.x_center.shape[0]} degree3 kernels')
+            trainable_kernel3_list *= L3  # duplicate the one-member list to have L3 members
+            self.trainable_kernel3 = self.cat_kernels(trainable_kernel3_list) # generate a single tensor with L as the first dimension from the list
+            trainable_kernelconv3 = KernelConv(init_kernel=self.trainable_kernel3, requires_grad=True) # generate the trainable KernelConv
+        else:
+            trainable_kernelconv3 = None
+        self.fixed_kernel3 = self.cat_kernels(fixed_kernel3_list)
+        fixed_kernelconv3 = KernelConv(init_kernel=self.fixed_kernel3, requires_grad=False)
+        print(f'Predefined1HopKernelSetConv: there are {self.fixed_kernel3.x_center.shape[0]} degree3 fixed kernels, {L3} degree3 trainable kernels')
 
         # degree4 kernels
-        kernel4_list = get_hop1_kernel_list(D)[3]
+        fixed_kernel4_list = get_hop1_kernel_list(D)[3]
+        trainable_kernel4_list = [fixed_kernel4_list[0]]  # get the first one in fixed_kernel as the starting kernel as a list
         if L4 is not None:
-            rand_kernel4 = Data(x_center=torch.randn(L4, 1, node_attr_dim), x_support=torch.randn(L4, 4, node_attr_dim),
-                                edge_attr_support=torch.randn(L4, 4, edge_attr_dim), p_support=torch.randn(L4, 4, D))
-            kernel4_list.append(rand_kernel4)
-        self.kernel4 = self.cat_kernels(kernel4_list)
-        kernelconv4 = KernelConv(init_kernel=self.kernel4, requires_grad=False)
-        print(f'Predefined1HopKernelSetConv: there are {self.kernel4.x_center.shape[0]} degree4 kernels')
-        # print(kernelconv1.get_num_kernels())
-        super(Predefined1HopKernelSetConv, self).__init__(kernelconv1, kernelconv2, kernelconv3, kernelconv4)
+            trainable_kernel4_list *= L4  # duplicate the one-member list to have L4 members
+            self.trainable_kernel4 = self.cat_kernels(trainable_kernel4_list) # generate a single tensor with L as the first dimension from the list
+            trainable_kernelconv4 = KernelConv(init_kernel=self.trainable_kernel4, requires_grad=True) # generate the trainable KernelConv
+        else:
+            trainable_kernelconv4 = None
+        self.fixed_kernel4 = self.cat_kernels(fixed_kernel4_list)
+        fixed_kernelconv4 = KernelConv(init_kernel=self.fixed_kernel4, requires_grad=False)
+        print(f'Predefined1HopKernelSetConv: there are {self.fixed_kernel4.x_center.shape[0]} degree4 fixed kernels, {L4} degree4 trainable kernels')
+
+        super(Predefined1HopKernelSetConv, self).__init__(fixed_kernelconv1, fixed_kernelconv2, fixed_kernelconv3, fixed_kernelconv4, trainable_kernelconv1, trainable_kernelconv2, trainable_kernelconv3, trainable_kernelconv4)
 
     def cat_kernels(self, kernel_list):
         x_center_list = [kernel.x_center for kernel in kernel_list]
@@ -655,8 +685,13 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
         return data
 
     def get_num_kernel(self):
-        print(f'total number kernels:{self.kernel1.x_center.shape[0] + self.kernel2.x_center.shape[0] + self.kernel3.x_center.shape[0] + self.kernel4.x_center.shape[0]}')
-        return self.kernel1.x_center.shape[0] + self.kernel2.x_center.shape[0] + self.kernel3.x_center.shape[0] + self.kernel4.x_center.shape[0]
+        num_trainable_kernel = 0
+        if hasattr(self, 'trainable_kernel1'):
+            num_trainable_kernel = self.trainable_kernel1.x_center.shape[0] + self.trainable_kernel2.x_center.shape[0]+self.trainable_kernel3.x_center.shape[0]+self.trainable_kernel4.x_center.shape[0]
+
+        total_num = self.fixed_kernel1.x_center.shape[0] + self.fixed_kernel2.x_center.shape[0] + self.fixed_kernel3.x_center.shape[0] + self.fixed_kernel4.x_center.shape[0] + num_trainable_kernel
+        print(f'total number kernels:{total_num}')
+        return total_num
 
 
 # class KernelLayer(Module):
@@ -684,6 +719,6 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
 
 if __name__ == "__main__":
     print('testing')
-    model = Predefined1HopKernelSetConv(D=2, node_attr_dim=5, edge_attr_dim=1)
+    model = Predefined1HopKernelSetConv(D=2, node_attr_dim=5, edge_attr_dim=1, L1 = 2, L2 = 3, L3 = 4, L4 = 2)
     num = model.get_num_kernel()
     print(num)

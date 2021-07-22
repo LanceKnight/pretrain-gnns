@@ -167,7 +167,7 @@ class GNN_graphpred(torch.nn.Module):
         print(f'node_rep:{node_representation.shape}')
         graph_representation = self.pool(node_representation, batch)
         print(f'graph_rep:{graph_representation.shape}')
-        print(self.graph_pred_linear)
+        print(f'linear layer shape:{self.graph_pred_linear}')
         pred = self.graph_pred_linear(graph_representation)
         # print(f'graph_rep:{graph_representation.shape}')
         # print(f'pred:{pred.shape}')

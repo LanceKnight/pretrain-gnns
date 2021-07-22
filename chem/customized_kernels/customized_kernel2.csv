@@ -1,8 +1,8 @@
 name,smiles,center_atom_id
 C-O*-H,CO[H],1
 C#C*C,C#CC,1
-ether,COC,1
-nitrile,CC#N,1
+C-O*-C,COC,1
+C-C*#N,CC#N,1
 nitroso,CN=O,1
 thiol,CS[H],1
 sulfide,CSC,1
