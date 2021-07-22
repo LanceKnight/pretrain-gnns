@@ -60,7 +60,8 @@ class MolGCN(MessagePassing):
             save_score = kwargv['save_score']
         h = x
 
-        for i in range(self.num_layers):
+        print(f'num_layers:{self.num_layers}')
+        for i in range(self.num_layers - 1):
             print(f'{i}th layer')
             data.x = h
 
@@ -95,12 +96,12 @@ class GNN_graphpred(torch.nn.Module):
 
     def __init__(self, num_layers=1, num_kernel1=None, num_kernel2=None, num_kernel3=None, num_kernel4=None, predined_kernelsets=True, x_dim=5, p_dim=3, edge_attr_dim=1, JK="last", drop_ratio=0, graph_pooling="mean"):
         super(GNN_graphpred, self).__init__()
-        self.num_layer = num_layers
+        self.num_layers = num_layers
         self.drop_ratio = drop_ratio
         self.JK = JK
         self.D = p_dim
 
-        if self.num_layer < 1:
+        if self.num_layers < 1:
             raise ValueError("GNN_graphpred: Number of GNN layers must be greater than 0.")
 
         self.gnn = MolGCN(num_layers=num_layers, num_kernel1=num_kernel1, num_kernel2=num_kernel2, num_kernel3=num_kernel3,
@@ -138,7 +139,7 @@ class GNN_graphpred(torch.nn.Module):
 
         if self.JK == "concat":
             self.graph_pred_linear = torch.nn.Linear(
-                self.mult * (self.num_layer + 1) * self.emb_dim, 1)
+                self.mult * (self.num_layers + 1) * self.emb_dim, 1)
         else:
             self.graph_pred_linear = torch.nn.Linear(self.gnn.num_kernels(-1), 1)
 
@@ -163,7 +164,10 @@ class GNN_graphpred(torch.nn.Module):
             raise ValueError("unmatched number of arguments.")
 
         node_representation = self.gnn(x=x, edge_index=edge_index, edge_attr=edge_attr, p=p, save_score=save_score)
+        print(f'node_rep:{node_representation.shape}')
         graph_representation = self.pool(node_representation, batch)
+        print(f'graph_rep:{graph_representation.shape}')
+        print(self.graph_pred_linear)
         pred = self.graph_pred_linear(graph_representation)
         # print(f'graph_rep:{graph_representation.shape}')
         # print(f'pred:{pred.shape}')

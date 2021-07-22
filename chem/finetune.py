@@ -163,9 +163,9 @@ def main():
 
     # ==========set up dataset==========
     # windows
-    root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
+    # root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
     # linux
-    # root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
+    root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
     if args.dataset == '435008':
         root = root + 'qsar_benchmark2015'
         dataset = args.dataset
@@ -223,8 +223,8 @@ def main():
     # ==========set up model==========
     model = GNN_graphpred(num_layers=args.num_layers, num_kernel1=args.num_kernel1, num_kernel2=args.num_kernel2, num_kernel3=args.num_kernel3, num_kernel4=args.num_kernel4, x_dim=5, p_dim=D,
                           edge_attr_dim=1, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling)
-    # check model size
-    print_model_size(model)
+    # # check model size
+    # print_model_size(model)
 
     if not args.input_model_file == "":
         model.from_pretrained(args.input_model_file)

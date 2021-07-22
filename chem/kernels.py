@@ -297,9 +297,9 @@ class KernelConv(Module):
 
         print('\n')
         # print(f'len sc:{length_sc}')
-        print(f'angle sc:{angle_sc}')
-        print(f'support attribute_sc:{supp_attr_sc}')
-        print(f'center_attr_sc:{center_attr_sc}')
+        # print(f'angle sc:{angle_sc}')
+        # print(f'support attribute_sc:{supp_attr_sc}')
+        # print(f'center_attr_sc:{center_attr_sc}')
         # print(f'edge attribute score:{edge_attr_support_sc}')
         # print(f'total sc: {sc.shape}')
         return sc  # , length_sc, angle_sc, supp_attr_sc, center_attr_sc, edge_attr_support_sc
