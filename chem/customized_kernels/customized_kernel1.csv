@@ -1,5 +1,8 @@
 name,smiles,center_atom_id
-fluride,CF,1
-cloride,CCl,1
-bromide,CBr,1
-iodide,CI,1
+F*-C,CF,1
+Cl*-C,CCl,1
+Br*-C,CBr,1
+I*-C,CI,1
+O*=C,O=C,0
+H*-C,C[H],1
+H*-N,N[H],1

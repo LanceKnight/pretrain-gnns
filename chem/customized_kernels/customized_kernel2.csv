@@ -1,6 +1,6 @@
 name,smiles,center_atom_id
-alcohol,CO[H],1
-alkyne,CC#CC,1
+C-O*-H,CO[H],1
+C#C*C,C#CC,1
 ether,COC,1
 nitrile,CC#N,1
 nitroso,CN=O,1
