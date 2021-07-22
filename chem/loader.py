@@ -18,55 +18,43 @@ from torch_geometric.data import InMemoryDataset
 # from itertools import repeat, product, chain
 from tqdm import tqdm
 
+def generate_element_rep_list(elements):
 
-elem_lst = None
+    print('calculating rdkit element representation lookup table')
+    elem_rep_lookup = []
+    for elem in elements:
+        pt = Chem.GetPeriodicTable()
 
+        if isinstance(elem, int):
+            num = elem
+            sym = pt.GetElementSymbol(num)
+        else:
+            num = pt.GetAtomicNumber(elem)
+            sym = elem
+        w = pt.GetAtomicWeight(elem)
 
-def lookup_from_rdkit(elements):
-    global elem_lst
+        Rvdw = pt.GetRvdw(elem)
+    #     Rcoval = pt.GetRCovalent(elem)
+        valence = pt.GetDefaultValence(elem)
+        outer_elec = pt.GetNOuterElecs(elem)
 
-    if elem_lst is None:
-        print('calculating rdkit element representation lookup table')
-        elem_rep_lookup = []
-        for elem in elements:
-            pt = Chem.GetPeriodicTable()
-
-            if isinstance(elem, int):
-                num = elem
-                sym = pt.GetElementSymbol(num)
-            else:
-                num = pt.GetAtomicNumber(elem)
-                sym = elem
-            w = pt.GetAtomicWeight(elem)
-
-            Rvdw = pt.GetRvdw(elem)
-        #     Rcoval = pt.GetRCovalent(elem)
-            valence = pt.GetDefaultValence(elem)
-            outer_elec = pt.GetNOuterElecs(elem)
-
-            elem_rep = [num, w, Rvdw, valence, outer_elec]
+        elem_rep = [num, w, Rvdw, valence, outer_elec]
 #             print(elem_rep)
 
-            elem_rep_lookup.append(elem_rep)
-        elem_lst = elem_rep_lookup.copy()
-        return elem_rep_lookup
-    else:
-        return elem_lst
+        elem_rep_lookup.append(elem_rep)
+    elem_lst = elem_rep_lookup.copy()
+    return elem_rep_lookup
 
 
-def get_atom_rep(atomic_num, package='rdkit'):
-    '''use rdkit or pymatgen to generate atom representation
+max_elem_num = 118
+element_nums = [x + 1 for x in range(max_elem_num)]
+elem_lst = generate_element_rep_list(element_nums)
+
+
+def get_atom_rep(atomic_num):
+    '''use rdkit to generate atom representation
     '''
-    max_elem_num = 118
-    element_nums = [x + 1 for x in range(max_elem_num)]
-
-    if package == 'rdkit':
-        elem_lst = lookup_from_rdkit(element_nums)
-    elif package == 'pymatgen':
-        raise Exception('pymatgen implementation is deprecated.')
-        # elem_lst = lookup_from_pymatgen(element_nums)
-    else:
-        raise Exception('cannot generate atom representation lookup table')
+    global elem_lst
 
     result = 0
     try:
@@ -75,6 +63,28 @@ def get_atom_rep(atomic_num, package='rdkit'):
         print(f'error: atomic_num {atomic_num} does not exist')
 
     return result
+
+
+# def get_atom_rep(atomic_num, package='rdkit'):
+#     '''use rdkit or pymatgen to generate atom representation
+#     '''
+#     global elem_lst
+
+#     if package == 'rdkit':
+#         elem_lst = lookup_from_rdkit(element_nums)
+#     elif package == 'pymatgen':
+#         raise Exception('pymatgen implementation is deprecated.')
+#         # elem_lst = lookup_from_pymatgen(element_nums)
+#     else:
+#         raise Exception('cannot generate atom representation lookup table')
+
+#     result = 0
+#     try:
+#         result = elem_lst[atomic_num - 1]
+#     except:
+#         print(f'error: atomic_num {atomic_num} does not exist')
+
+#     return result
 
 
 def smiles2graph(D, smiles):
