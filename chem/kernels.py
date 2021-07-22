@@ -17,7 +17,7 @@ from customized_kernels import get_hop1_kernel_list
 
 
 class KernelConv(Module):
-    def __init__(self, L=None, D=None, num_supports=None, node_attr_dim=None, edge_attr_dim=None, init_kernel=None, requires_grad=True):
+    def __init__(self, L=None, D=None, num_supports=None, node_attr_dim=None, edge_attr_dim=None, init_kernel=None, requires_grad=True, init_length_sc_weight = 0.1, init_angle_sc_weight = 0.5,  init_center_attr_sc_weight = 0.8, init_support_attr_sc_weight = 0.8, init_edge_attr_support_sc_weight=0.8, weight_requires_grad= False):
         super(KernelConv, self).__init__()
         if init_kernel is None:
             if (L is None) or (D is None) or (num_supports is None) or (node_attr_dim is None) or (edge_attr_dim is None):
@@ -41,6 +41,12 @@ class KernelConv(Module):
         p_support_tensor = init_kernel.p_support
 #         print(f'p_support_tensor:{p_support_tensor.shape}')
         self.p_support = Parameter(p_support_tensor, requires_grad=requires_grad)
+
+        self.length_sc_weight = Parameter(torch.tensor(init_length_sc_weight), requires_grad = weight_requires_grad)
+        self.angle_sc_weight = Parameter(torch.tensor(init_angle_sc_weight), requires_grad = weight_requires_grad)
+        self.center_attr_sc_weight = Parameter(torch.tensor(init_center_attr_sc_weight), requires_grad = weight_requires_grad)
+        self.support_attr_sc_weight = Parameter(torch.tensor(init_support_attr_sc_weight), requires_grad = weight_requires_grad)
+        self.edge_attr_support_sc_weight = Parameter(torch.tensor(init_edge_attr_support_sc_weight), requires_grad = weight_requires_grad)
 
     def get_num_kernels(self):
         return self.num_kernels
@@ -253,11 +259,11 @@ class KernelConv(Module):
 
         one = torch.tensor([1], device=p_neighbor.device)
         sc = torch.atan(1 /
-                        (torch.square(length_sc - one) +
-                         torch.square(angle_sc - one) +
-                         torch.square(support_attr_sc - one) +
-                         torch.square(center_attr_sc - one) +
-                         torch.square(edge_attr_support_sc - one)
+                        (torch.square(length_sc - one) * self.length_sc_weight +
+                         torch.square(angle_sc - one) * self.angle_sc_weight +
+                         torch.square(support_attr_sc - one) * self.support_attr_sc_weight +
+                         torch.square(center_attr_sc - one) * self.center_attr_sc_weight +
+                         torch.square(edge_attr_support_sc - one) * self.edge_attr_support_sc_weight
                          )).squeeze(0)
 
         # sc = torch.atan(1 /
