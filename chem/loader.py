@@ -86,7 +86,7 @@ def smiles2graph(D, smiles):
     smiles = smiles.replace(r'/=', '=')
     smiles = smiles.replace(r'\=', '=')
     try:
-        mol = Chem.MolFromSmiles(smiles, sanitize=False)
+        mol = Chem.MolFromSmiles(smiles, sanitize=True)
     except Exception as e:
         print(f'{e}, smiles:{smiles}')
     if mol is None:
@@ -94,7 +94,7 @@ def smiles2graph(D, smiles):
         print(f'mol is None. smiles:{smiles}')
         return None
     try:
-        mol.UpdatePropertyCache(strict=False)
+        # mol.UpdatePropertyCache(strict=False)
         mol = Chem.AddHs(mol)
     except Exception as e:
         print(f'{e}, smiles:{smiles}')

@@ -24,8 +24,8 @@ def generate_1hop_kernel(D, typical_compound_smiles, center_atom_id, hops=1):
     smiles = typical_compound_smiles.replace(r'/=', '=')
     smiles = typical_compound_smiles.replace(r'\=', '=')
 
-    mol = Chem.MolFromSmiles(smiles, sanitize=False)
-    mol.UpdatePropertyCache(strict=False)
+    mol = Chem.MolFromSmiles(smiles, sanitize=True)
+    # mol.UpdatePropertyCache(strict=False)
     mol = Chem.AddHs(mol)
 
     if D == 2:
