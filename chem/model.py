@@ -61,7 +61,7 @@ class MolGCN(MessagePassing):
         h = x
 
         print(f'num_layers:{self.num_layers}')
-        for i in range(self.num_layers - 1):
+        for i in range(self.num_layers):
             print(f'{i}th layer')
             data.x = h
 
