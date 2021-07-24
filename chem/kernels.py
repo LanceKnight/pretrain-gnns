@@ -265,7 +265,7 @@ class KernelConv(Module):
                          torch.square(support_attr_sc - one) * self.support_attr_sc_weight +
                          torch.square(center_attr_sc - one) * self.center_attr_sc_weight +
                          torch.square(edge_attr_support_sc - one) * self.edge_attr_support_sc_weight
-                         )).squeeze(0)
+                         ))
 
 
         # sc = torch.atan(1 /
@@ -584,7 +584,7 @@ class BaseKernelSetConv(Module):
                 if self.trainable_kernelconv_set[deg - 1] is not None:
                     print('---trainable_degree_sc---')
                     trainable_degree_sc = self.trainable_kernelconv_set[deg - 1](data=data)
-                    # print(f'trianable_degree_sc {trainable_degree_sc.shape}')
+                    print(f'trianable_degree_sc {trainable_degree_sc.shape}')
                     degree_sc = torch.cat([fixed_degree_sc, trainable_degree_sc])
                 else:
                     degree_sc = fixed_degree_sc
