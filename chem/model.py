@@ -60,7 +60,6 @@ class MolGCN(MessagePassing):
             save_score = kwargv['save_score']
         h = x
 
-        print(f'num_layers:{self.num_layers}')
         for i in range(self.num_layers):
             print(f'{i}th layer')
             data.x = h
@@ -94,7 +93,7 @@ class GNN_graphpred(torch.nn.Module):
     JK-net: https://arxiv.org/abs/1806.03536
     """
 
-    def __init__(self, num_layers=1, num_kernel1=None, num_kernel2=None, num_kernel3=None, num_kernel4=None, predined_kernelsets=True, x_dim=5, p_dim=3, edge_attr_dim=1, JK="last", drop_ratio=0, graph_pooling="mean"):
+    def __init__(self, num_layers=1, num_kernel1=0, num_kernel2=0, num_kernel3=0, num_kernel4=0, predined_kernelsets=True, x_dim=5, p_dim=3, edge_attr_dim=1, JK="last", drop_ratio=0, graph_pooling="mean"):
         super(GNN_graphpred, self).__init__()
         self.num_layers = num_layers
         self.drop_ratio = drop_ratio
@@ -164,26 +163,25 @@ class GNN_graphpred(torch.nn.Module):
             raise ValueError("unmatched number of arguments.")
 
         node_representation = self.gnn(x=x, edge_index=edge_index, edge_attr=edge_attr, p=p, save_score=save_score)
-        print(f'node_rep:{node_representation.shape}')
+        # print(f'node_rep:{node_representation.shape}')
         graph_representation = self.pool(node_representation, batch)
         print(f'graph_rep:{graph_representation.shape}')
         print(f'linear layer shape:{self.graph_pred_linear}')
         pred = self.graph_pred_linear(graph_representation)
         # print(f'graph_rep:{graph_representation.shape}')
-        # print(f'pred:{pred.shape}')
+        print(f'pred.grad:{pred.grad}')
         return pred, graph_representation
 
 
 from tqdm import tqdm
 
 if __name__ == "__main__":
-
     D = 2
     dataset = '435008'
     # windows
-    root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
+    # root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
     # linux
-    # root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
+    root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
     if dataset == '435008':
         root = root + 'qsar_benchmark2015'
         dataset = dataset
@@ -196,15 +194,27 @@ if __name__ == "__main__":
     dataset = dataset[234:236]
 
     # model = MolGCN(num_layers = 2, num_kernel_layers = 2, x_dim = 5, p_dim =3, edge_attr_dim = 1)
-    model = GNN_graphpred(num_layers=1, num_kernel1=2, num_kernel2=3, num_kernel3=4, num_kernel4=2, x_dim=5, p_dim=D, edge_attr_dim=1, JK='last', drop_ratio=0.5, graph_pooling='mean')
+    model = GNN_graphpred(num_layers=1, num_kernel1=2, num_kernel2=1, num_kernel3=0, num_kernel4=0, x_dim=5, p_dim=D, edge_attr_dim=1, JK='last', drop_ratio=0.5, graph_pooling='mean')
 
-    loader = DataLoader(dataset, batch_size=1)
-    save_score = True
-    for data in loader:
-        out = model(data, save_score=save_score)
-        save_score = False
+    # loader = DataLoader(dataset, batch_size=2)
+    # save_score = True
+    # for data in loader:
+    #     pred = model(data, save_score=save_score)
+    #     print(f'pred:{pred}')
+    #     save_score = False
 
-    # model.save('saved_kernellayers')
-
-    # data = dataset[2]
-    # model(data=data)
+    cri = torch.nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters())
+    for epoch in range(1):
+        loader = DataLoader(dataset, batch_size=1)
+        save_score = True
+        for i, data in enumerate(loader):
+            print(f'=======data-{i}========')
+            optimizer.zero_grad()
+            pred, h = model(data)
+            y = torch.ones(pred.shape)
+            loss = cri(pred, y)
+            print(f'loss:{loss}, loss_grad:{loss.grad}')
+            loss.backward()
+            optimizer.step()
+            print(f'pred:{pred}')

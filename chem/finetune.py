@@ -26,7 +26,7 @@ from model import MolGCN, GNN_graphpred
 from evaluation import enrichment
 from util import print_model_size
 
-criterion = nn.BCEWithLogitsLoss()
+criterion = nn.BCEWithLogitsLoss(reduction='sum')
 # criterion = nn.BCELoss()
 
 
@@ -46,17 +46,20 @@ def train(args, model, device, loader, optimizer):
 
         print('pred:')
         print(pred)
-        print('y:')
-        print(y)
+        # print('y:')
+        # print(y)
 
-        loss = criterion(pred, y)
+        loss = criterion(pred, y.)
+        print(f'loss:{loss}')
+
+        # for name, param in model.named_parameters():
+        #     print(f'{name}: {param}')
 
         loss_lst.append(loss)
         optimizer.zero_grad()
-        # loss = torch.sum(loss_mat) / torch.sum(is_valid)
         loss.backward()
-        torch.cuda.empty_cache()
-
+        for name, param in model.named_parameters():
+            print(f'{name}_grad: {param.grad}')
         optimizer.step()
     batch_loss = sum(loss_lst) / float(len(loader))
     print(f'loss:{batch_loss}')
@@ -177,7 +180,7 @@ def main():
 
     dataset = MoleculeDataset(D=D, root=root, dataset=dataset)
     print(dataset[0])
-    index = list(range(400)) + list(range(1000, 1400))
+    index = list(range(40)) + list(range(1000, 1040))
     dataset = dataset[index]
     print(dataset)
 
@@ -224,7 +227,7 @@ def main():
     model = GNN_graphpred(num_layers=args.num_layers, num_kernel1=args.num_kernel1, num_kernel2=args.num_kernel2, num_kernel3=args.num_kernel3, num_kernel4=args.num_kernel4, x_dim=5, p_dim=D,
                           edge_attr_dim=1, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling)
     # # check model size
-    # print_model_size(model)
+    print_model_size(model)
 
     if not args.input_model_file == "":
         model.from_pretrained(args.input_model_file)
