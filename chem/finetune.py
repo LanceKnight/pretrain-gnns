@@ -58,11 +58,11 @@ def train(args, model, device, loader, optimizer):
         loss_lst.append(loss)
         optimizer.zero_grad()
         loss.backward()
-        for name, param in model.named_parameters():
-            print(f'{name}_grad: {param.grad}')
+
         optimizer.step()
     batch_loss = sum(loss_lst) / float(len(loader))
     print(f'loss:{batch_loss}')
+    return batch_loss
 
 
 def eval(args, model, device, loader):
@@ -110,7 +110,8 @@ def eval(args, model, device, loader):
 def main():
     # start clearml as the task manager. this is optional.
 
-    # task = Task.init(project_name="kernel GNN", task_name="out-of-memory")
+    task = Task.init(project_name="kernel GNN", task_name="loss check")
+    logger = task.get_logger()
 
     # ==========settings==========
     parser = argparse.ArgumentParser(
@@ -180,7 +181,7 @@ def main():
 
     dataset = MoleculeDataset(D=D, root=root, dataset=dataset)
     print(dataset[0])
-    index = list(range(40)) + list(range(1000, 1040))
+    index = list(range(800)) + list(range(1000, 1800))
     dataset = dataset[index]
     print(dataset)
 
@@ -261,7 +262,8 @@ def main():
     for epoch in range(1, args.epochs + 1):
         print("====epoch " + str(epoch))
 
-        train(args, model, device, train_loader, optimizer)
+        loss = train(args, model, device, train_loader, optimizer)
+        logger.report_scalar(title='loss', series='Loss', value=loss.item(), iteration=epoch)
 
         print("====Evaluation")
         if args.eval_train:
