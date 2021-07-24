@@ -124,32 +124,11 @@ hop1_degree2_functional_groups = read_kernel_from_csv('customized_kernels/custom
 
 
 # degree3
-hop1_degree3_functional_groups = {
-    'alkene': ['CC=CC', 1],
-    'arene': ['Cc1ccccc1', 1],
-    'aldehyde': ['CC(=O)[H]', 1],
-    'ketone': ['CC(=O)C', 1],
-    'acyl_fluoride': ['CC(=O)F', 1],
-    'acyl_cloride': ['CC(=O)Cl', 1],
-    'acyl_bromide': ['CC(=O)Br', 1],
-    'acyl_iodide': ['CC(=O)I', 1],
-    'amine': ['C[N](C)C', 1],
-    'nitro': ['C[N+](=O)O', 1],
-    'sulfoxide': ['C[S](C)=O', 1],
-    'thial': ['CC(=S)[H]', 1],
-    'thioketone': ['CC(=S)C', 1],
-    'phosphine': ['C[P](C)C', 1],
-}
+hop1_degree3_functional_groups = read_kernel_from_csv('customized_kernels/customized_kernel3.csv')
 
 
 # degree4
-hop1_degree4_functional_groups = {
-    'alkane_primary': ['CC', 1],
-    'alkane_secondary': ['CCC', 1],
-    'alkane_tertiary': ['C(C)(C)(C)[H]', 0],
-    'alkane_quaternary': ['C(C)(C)(C)C', 0],
-    'sulfone': ['C[S](C)(=O)=O', 1],
-}
+hop1_degree4_functional_groups = read_kernel_from_csv('customized_kernels/customized_kernel4.csv')
 
 
 # ===1hop kernels - 2D===
