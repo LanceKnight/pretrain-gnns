@@ -307,12 +307,12 @@ def print_model_size(model):
     previous_layer_num = -1
     num_trainable_layer_param = 0
     num_fixed_layer_param = 0
-    for name, param in model.state_dict().items():
+    for name, param in model.named_parameters():
         name_segments = name.split('.')
         # for kernelcov layer
         if(len(name_segments) > 2):
             layer_num = name_segments[2]
-            kernelsetconv_type = name_segments[3]
+            # kernelsetconv_type = name_segments[3]
 
             if(layer_num != previous_layer_num):
                 print(f'===layer:{layer_num}===')
@@ -321,7 +321,7 @@ def print_model_size(model):
                     print(f'total_num_layer_param:{num_fixed_layer_param + num_trainable_layer_param}, trainable_elements:{num_trainable_layer_param}, fixed_elements:{num_fixed_layer_param}')
                 num_fixed_layer_param = 0
                 num_trainable_layer_param = 0
-            if 'fixed' in kernelsetconv_type:
+            if not param.requires_grad:
                 num_fixed_layer_param += param.nelement()
             else:
                 num_trainable_layer_param += param.nelement()

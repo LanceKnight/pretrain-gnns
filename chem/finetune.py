@@ -49,7 +49,7 @@ def train(args, model, device, loader, optimizer):
         # print('y:')
         # print(y)
 
-        loss = criterion(pred, y.)
+        loss = criterion(pred, y)
         print(f'loss:{loss}')
 
         # for name, param in model.named_parameters():

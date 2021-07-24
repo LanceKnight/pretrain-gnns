@@ -20,7 +20,7 @@ class MolGCN(MessagePassing):
         self.num_kernerls_list = []
         # first layer
         if (num_kernel1 is not None) and (num_kernel2 is not None) and (num_kernel3 is not None) and (num_kernel4 is not None) and (predined_kernelsets == False):
-            kernel_layer = KernelSetConv(num_kernel1, num_kernel2, num_kernel3, num_kernel4, D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_dim)
+            kernel_layer = KernelSetConv(num_kernel1, num_kernel2, num_kernel3, num_kernel4, D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_attr_dim)
             num_kernels = num_kernel1 + num_kernel2 + num_kernel3 + num_kernel4
         elif (predined_kernelsets == True):
             kernel_layer = Predefined1HopKernelSetConv(D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_attr_dim, L1=num_kernel1, L2=num_kernel2, L3=num_kernel3, L4=num_kernel4)
@@ -165,15 +165,16 @@ class GNN_graphpred(torch.nn.Module):
         node_representation = self.gnn(x=x, edge_index=edge_index, edge_attr=edge_attr, p=p, save_score=save_score)
         # print(f'node_rep:{node_representation.shape}')
         graph_representation = self.pool(node_representation, batch)
-        print(f'graph_rep:{graph_representation.shape}')
-        print(f'linear layer shape:{self.graph_pred_linear}')
+        # print(f'graph_rep:{graph_representation.shape}')
+        # print(f'linear layer shape:{self.graph_pred_linear}')
         pred = self.graph_pred_linear(graph_representation)
         # print(f'graph_rep:{graph_representation.shape}')
-        print(f'pred.grad:{pred.grad}')
+        # print(f'pred.grad:{pred.grad}')
         return pred, graph_representation
 
 
 from tqdm import tqdm
+
 
 if __name__ == "__main__":
     D = 2
@@ -194,7 +195,8 @@ if __name__ == "__main__":
     dataset = dataset[234:236]
 
     # model = MolGCN(num_layers = 2, num_kernel_layers = 2, x_dim = 5, p_dim =3, edge_attr_dim = 1)
-    model = GNN_graphpred(num_layers=1, num_kernel1=2, num_kernel2=1, num_kernel3=0, num_kernel4=0, x_dim=5, p_dim=D, edge_attr_dim=1, JK='last', drop_ratio=0.5, graph_pooling='mean')
+    model = GNN_graphpred(num_layers=1, num_kernel1=2, num_kernel2=1, num_kernel3=4, num_kernel4=2, x_dim=5, p_dim=D,
+                          edge_attr_dim=1, JK='last', drop_ratio=0.5, graph_pooling='mean', predined_kernelsets=True)
 
     # loader = DataLoader(dataset, batch_size=2)
     # save_score = True
@@ -209,12 +211,33 @@ if __name__ == "__main__":
         loader = DataLoader(dataset, batch_size=1)
         save_score = True
         for i, data in enumerate(loader):
-            print(f'=======data-{i}========')
+            # print(f'=======data-{i}========')
+            # print('-----before-----')
+            # for name, param in model.named_parameters():
+            #     if param.requires_grad:
+            #         print(f'name:{name}, param:{param}, grad:{param.grad}')
+            model.train()
             optimizer.zero_grad()
             pred, h = model(data)
-            y = torch.ones(pred.shape)
+            pred = pred.to(torch.float64)
+            y = torch.ones(pred.shape).to(torch.float64)
+
             loss = cri(pred, y)
-            print(f'loss:{loss}, loss_grad:{loss.grad}')
+            print(f'loss:{loss}')
             loss.backward()
+
+            # extra forward
+            model.eval()
+            pred, h = model(data)
+            # print('---before update---')
+            # for name, param in model.named_parameters():
+            #     if param.requires_grad:
+            #         print(f'name:{name}, param:{param}, grad:{param.grad}')
+            # print(f'pred:{pred}, loss:{loss}, loss_grad:{loss.grad}')
+
             optimizer.step()
-            print(f'pred:{pred}')
+            # print('-----after update------')
+            # for name, param in model.named_parameters():
+            #     if param.requires_grad:
+            #         print(f'name:{name}, param:{param}, grad:{param.grad}')
+            # print(f'pred:{pred}, loss:{loss}, loss_grad:{loss.grad}')
