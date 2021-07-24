@@ -26,7 +26,7 @@ from model import MolGCN, GNN_graphpred
 from evaluation import enrichment
 from util import print_model_size
 
-criterion = nn.BCEWithLogitsLoss(reduction = 'sum')
+criterion = nn.BCEWithLogitsLoss(reduction='sum')
 # criterion = nn.BCELoss()
 
 
@@ -49,7 +49,7 @@ def train(args, model, device, loader, optimizer):
         # print('y:')
         # print(y)
 
-        loss = criterion(pred, y)
+        loss = criterion(pred, y.)
         print(f'loss:{loss}')
 
         # for name, param in model.named_parameters():

@@ -169,14 +169,13 @@ class GNN_graphpred(torch.nn.Module):
         print(f'linear layer shape:{self.graph_pred_linear}')
         pred = self.graph_pred_linear(graph_representation)
         # print(f'graph_rep:{graph_representation.shape}')
-        # print(f'pred:{pred.shape}')
+        print(f'pred.grad:{pred.grad}')
         return pred, graph_representation
 
 
 from tqdm import tqdm
 
 if __name__ == "__main__":
-
     D = 2
     dataset = '435008'
     # windows
@@ -209,11 +208,13 @@ if __name__ == "__main__":
     for epoch in range(1):
         loader = DataLoader(dataset, batch_size=1)
         save_score = True
-        for data in loader:
+        for i, data in enumerate(loader):
+            print(f'=======data-{i}========')
             optimizer.zero_grad()
             pred, h = model(data)
             y = torch.ones(pred.shape)
             loss = cri(pred, y)
+            print(f'loss:{loss}, loss_grad:{loss.grad}')
             loss.backward()
             optimizer.step()
             print(f'pred:{pred}')
