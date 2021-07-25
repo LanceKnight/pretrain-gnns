@@ -14,7 +14,7 @@ import os
 from loader import get_atom_rep
 
 
-def generate_1hop_kernel(D, typical_compound_smiles, center_atom_id, hops=1):
+def generate_1hop_kernel(D, typical_compound_smiles, center_atom_id):
     #     '''
     #     given a typical compound containing a certain kernal, and the center atom id, genrate the kernel
     #     '''
