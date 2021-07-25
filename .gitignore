@@ -2,3 +2,4 @@
 dataset
 *.pth
 scores.csv
+.ipynb_checkpoints
