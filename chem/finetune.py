@@ -11,7 +11,6 @@ from torch.utils.data import WeightedRandomSampler
 from tqdm import tqdm
 import numpy as np
 
-from sklearn.metrics import roc_auc_score
 
 from splitters import scaffold_split, random_split
 import pandas as pd
@@ -25,7 +24,7 @@ from tensorboardX import SummaryWriter
 from clearml import Task
 
 from model import GNN_graphpred
-from evaluation import enrichment
+from evaluation import enrichment, roc_auc, ppv
 from util import print_model_size
 
 criterion = nn.BCEWithLogitsLoss(reduction='sum')
@@ -46,13 +45,13 @@ def train(args, model, device, loader, optimizer):
                         batch.edge_attr, batch.batch)
         y = batch.y.view(pred.shape).to(torch.float64)
 
-        print('pred:')
-        print(pred)
-        print('y:')
-        print(y)
+        # print('pred:')
+        # print(pred)
+        # print('y:')
+        # print(y)
 
         loss = criterion(pred, y)
-        print(f'loss:{loss}')
+        # print(f'loss:{loss}')
 
         # for name, param in model.named_parameters():
         #     print(f'{name}: {param}')
@@ -90,23 +89,26 @@ def eval(args, model, device, loader):
     y_true = torch.cat(y_true, dim=0).cpu().numpy()
     y_scores = torch.cat(y_scores, dim=0).cpu().numpy()
 
-    roc_list = []
+    enrichment_list = []
+    roc_auc_list = []
+    ppv_list = []
 
     for i in range(y_true.shape[1]):
-        roc_list.append(enrichment(y_true[:, i], y_scores[:, i]))
+        enrichment_list.append(enrichment(y_true[:, i], y_scores[:, i]))
+        roc_auc_list.append(roc_auc(y_true[:, i], y_scores[:, i]))
+        ppv_list.append(ppv(y_true[:, i], y_scores[:, i]))
     # for i in range(y_true.shape[1]):
     #     # AUC is only defined when there is at least one positive data.
     #     if np.sum(y_true[:, i] == 1) > 0 and np.sum(y_true[:, i] == -1) > 0:
     #         is_valid = y_true[:, i]**2 > 0
-    #         roc_list.append(roc_auc_score(
+    #         enrichment_list.append(roc_auc_score(
     #             (y_true[is_valid, i] + 1) / 2, y_scores[is_valid, i]))
 
-    if len(roc_list) < y_true.shape[1]:
+    if len(enrichment_list) < y_true.shape[1]:
         print("Some target is missing!")
-        print("Missing ratio: %f" %
-              (1 - float(len(roc_list)) / y_true.shape[1]))
+        print("Missing ratio: %f" % (1 - float(len(enrichment_list)) / y_true.shape[1]))
 
-    return sum(roc_list) / len(roc_list)  # y_true.shape[1]
+    return sum(enrichment_list) / len(enrichment_list), sum(roc_auc_list) / len(roc_auc_list), sum(ppv_list) / len(ppv_list)
 
 
 def main():
@@ -186,7 +188,7 @@ def main():
 
     dataset = MoleculeDataset(D=args.D, root=root, dataset=dataset)
     print(f'dataset[0]:{dataset[0]}')
-    index = list(range(40000))  # + list(range(1000, 1500))
+    index = list(range(1000))
     dataset = dataset[index]
     print(f'dataset:{dataset}')
 
@@ -283,17 +285,28 @@ def main():
 
         print("====Evaluation")
         if args.eval_train:
-            train_acc = eval(args, model, device, train_loader)
+            train_enr, train_auc, train_ppv = eval(args, model, device, train_loader)
         else:
             print("omit the training accuracy computation")
-            train_acc = 0
-        val_acc = eval(args, model, device, val_loader)
-        test_acc = eval(args, model, device, test_loader)
+            train_enr = train_auc = train_ppv = 0
+        val_enr, val_auc, val_ppv = eval(args, model, device, val_loader)
+        test_enr, test_auc, test_ppv = eval(args, model, device, test_loader)
 
-        print("train: %f val: %f test: %f" % (train_acc, val_acc, test_acc))
-        logger.report_scalar(title='enrichment', series='train_acc', value=train_acc, iteration=epoch)
-        logger.report_scalar(title='enrichment', series='valid_acc', value=val_acc, iteration=epoch)
-        logger.report_scalar(title='enrichment', series='test_acc', value=test_acc, iteration=epoch)
+        print("enrichment:train: %f val: %f test: %f" % (train_enr, val_enr, test_enr))
+        print("roc auc:train: %f val: %f test: %f" % (train_auc, val_auc, test_auc))
+        print("ppv: train: %f val: %f test: %f" % (train_ppv, val_ppv, test_ppv))
+        logger.report_scalar(title='enrichment', series='train_acc', value=train_enr, iteration=epoch)
+        logger.report_scalar(title='enrichment', series='valid_acc', value=val_enr, iteration=epoch)
+        logger.report_scalar(title='enrichment', series='test_acc', value=test_enr, iteration=epoch)
+
+        logger.report_scalar(title='roc_auc', series='train_roc', value=train_auc, iteration=epoch)
+        logger.report_scalar(title='roc_auc', series='valid_roc', value=val_auc, iteration=epoch)
+        logger.report_scalar(title='roc_auc', series='test_roc', value=test_auc, iteration=epoch)
+
+        logger.report_scalar(title='ppv', series='train_ppv', value=train_ppv, iteration=epoch)
+        logger.report_scalar(title='ppv', series='valid_ppv', value=val_ppv, iteration=epoch)
+        logger.report_scalar(title='ppv', series='test_ppv', value=test_ppv, iteration=epoch)
+
         # val_acc_list.append(val_acc)
         # test_acc_list.append(test_acc)
         # train_acc_list.append(train_acc)

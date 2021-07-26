@@ -1,8 +1,8 @@
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, roc_auc_score
 import numpy as np
 
 
-def logAUC():
+def log_auc(FPR_range=None):
     pass
 
 def enrichment(y_true, y_pred):
@@ -17,6 +17,23 @@ def enrichment(y_true, y_pred):
     else:
         enr = np.NAN
     return enr
+
+
+def ppv(y_true, y_pred):
+    '''
+    positve predictive value
+    '''
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+
+    if(tp + fp) != 0:
+        ppv = (tp / (tp + fp))
+    else:
+        ppv = np.NAN
+    return ppv
+
+
+def roc_auc(y_true, y_pred):
+    return roc_auc_score(y_true, y_pred)
 
 
 if __name__ == '__main__':
