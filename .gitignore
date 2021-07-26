@@ -1,5 +1,5 @@
 *.pyc
 dataset
-*.pth
+saved_kernellayers
 scores.csv
 .ipynb_checkpoints
