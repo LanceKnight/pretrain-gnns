@@ -174,15 +174,18 @@ class GNN_graphpred(torch.nn.Module):
 
 
 from tqdm import tqdm
-
+import platform
+import os
 
 if __name__ == "__main__":
     D = 2
     dataset = '435008'
     # windows
-    # root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
+    if (platform.system() == 'Windows'):
+        root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
     # linux
-    root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
+    else:
+        root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
     if dataset == '435008':
         root = root + 'qsar_benchmark2015'
         dataset = dataset
@@ -195,7 +198,7 @@ if __name__ == "__main__":
     dataset = dataset[234:236]
 
     # model = MolGCN(num_layers = 2, num_kernel_layers = 2, x_dim = 5, p_dim =3, edge_attr_dim = 1)
-    model = GNN_graphpred(num_layers=1, num_kernel1=2, num_kernel2=1, num_kernel3=4, num_kernel4=2, x_dim=5, p_dim=D,
+    model = GNN_graphpred(num_layers=5, num_kernel1=2, num_kernel2=1, num_kernel3=4, num_kernel4=2, x_dim=5, p_dim=D,
                           edge_attr_dim=1, JK='last', drop_ratio=0.5, graph_pooling='mean', predined_kernelsets=True)
 
     # loader = DataLoader(dataset, batch_size=2)

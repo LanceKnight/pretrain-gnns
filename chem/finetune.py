@@ -18,12 +18,13 @@ import pandas as pd
 
 import os
 import shutil
+import platform
 
 from tensorboardX import SummaryWriter
 
 from clearml import Task
 
-from model import MolGCN, GNN_graphpred
+from model import GNN_graphpred
 from evaluation import enrichment
 from util import print_model_size
 
@@ -111,7 +112,7 @@ def eval(args, model, device, loader):
 def main():
     # start clearml as the task manager. this is optional.
 
-    task = Task.init(project_name="kernel GNN", task_name="loss check")
+    task = Task.init(project_name="kernel GNN", task_name="more layers")
     logger = task.get_logger()
 
     # ==========settings==========
@@ -170,9 +171,11 @@ def main():
 
     # ==========set up dataset==========
     # windows
-    # root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
+    if platform.system() == 'Windows':
+        root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
     # linux
-    root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
+    else:
+        root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
     if args.dataset == '435008':
         root = root + 'qsar_benchmark2015'
         dataset = args.dataset
