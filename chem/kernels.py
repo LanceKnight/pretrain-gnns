@@ -13,10 +13,10 @@ import pandas as pd
 
 import os
 
-from customized_kernels import get_hop1_kernel_list
+from customized_kernels import get_hop1_kernel_list, hop1_degree1_functional_groups, hop1_degree2_functional_groups, hop1_degree3_functional_groups, hop1_degree4_functional_groups, generate_kernel_with_angle_and_length_and_edge_attr
 
 
-torch.autograd.set_detect_anomaly(True) 
+torch.autograd.set_detect_anomaly(True)
 
 class KernelConv(Module):
     def __init__(self, L=None, D=None, num_supports=None, node_attr_dim=None, edge_attr_dim=None, init_kernel=None, requires_grad=True, init_length_sc_weight = 0.1, init_angle_sc_weight = 0.5,  init_center_attr_sc_weight = 0.8, init_support_attr_sc_weight = 0.8, init_edge_attr_support_sc_weight=0.8, weight_requires_grad= False):
@@ -187,16 +187,16 @@ class KernelConv(Module):
         p_support = self.p_support
 
         # print('=====cal total sc')
-        # print(f'x_center:{x_center}, grad:{x_center.grad}')
-        # print(f'x_support:{x_support}, grad:{x_support.grad}')
-        # print(f'edge_attr_support:{edge_attr_support}, grad:{edge_attr_support.grad}')
-        # print(f'p_support:{p_support}, grad:{p_support.grad}')
+        # print(f'x_center:{x_center.shape}')
+        # print(f'x_support:{x_support.shape}')
+        # print(f'edge_attr_support:{edge_attr_support.shape}')
+        # print(f'p_support:{p_support.shape}')
         # print('\n')
-        # print(f'x_focal:{x_focal.grad}')
-        # print(f'p_focal:{p_focal.grad}')
-        # print(f'x_neighbor:{x_neighbor.grad}')
-        # print(f'p_neighbor:{p_neighbor.grad}')
-        # print(f'edge_attr_neighbor:{edge_attr_neighbor.grad}')
+        # print(f'x_focal:{x_focal.shape}')
+        # print(f'p_focal:{p_focal.shape}')
+        # print(f'x_neighbor:{x_neighbor.shape}')
+        # print(f'p_neighbor:{p_neighbor.shape}')
+        # print(f'edge_attr_neighbor:{edge_attr_neighbor.shape}')
 
         # because every sub-score is calculated using actan function, which peaks at pi/2, so this max_atn is used to normalized the score so it is in [0,1]
         max_atan = torch.tensor([math.pi / 2], device=p_neighbor.device)
@@ -266,7 +266,7 @@ class KernelConv(Module):
                          torch.square(angle_sc - one) * self.angle_sc_weight +
                          torch.square(support_attr_sc - one) * self.support_attr_sc_weight +
                          torch.square(center_attr_sc - one) * self.center_attr_sc_weight +
-                         torch.square(edge_attr_support_sc - one) * self.edge_attr_support_sc_weight 
+                         torch.square(edge_attr_support_sc - one) * self.edge_attr_support_sc_weight
                          + 1e-8
                          ))
 
@@ -279,7 +279,7 @@ class KernelConv(Module):
         #                  torch.square(edge_attr_support_sc - max_atan)
         #                  )).squeeze(0)
         sc = sc / max_atan  # normalize the score to be in [0,1]
-    
+
 
         return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, edge_attr_support_sc
 
@@ -368,10 +368,19 @@ class BaseKernelSetConv(Module):
         else:
             self.num_trainable_kernel_list.append(None)
 
-        self.num_kernel_list = [self.num_fixed_kernel_list[i] + self.num_trainable_kernel_list[i] if self.num_trainable_kernel_list[i]
-                                is not None else self.num_fixed_kernel_list[i] for i in range(4)]  # num of kernels for each degree, combining both fixed and trainable kerenls
+        # num of kernels for each degree, combining both fixed and trainable kerenls
+        self.num_kernel_list = []
+        for i in range(4):
+            num = 0
+            if(self.num_fixed_kernel_list[i] is not None):
+                num = self.num_fixed_kernel_list[i]
+            if(self.num_trainable_kernel_list[i] is not None):
+                num += self.num_trainable_kernel_list[i]
+            self.num_kernel_list.append(num)
 
-        print(f'self.num_trainable_kernel_list:{self.num_trainable_kernel_list}')
+
+
+        print(f'self.num_kernel_list:{self.num_kernel_list}')
 #         kernel_set = ModuleList(
 #             [KernelConv(D=D, num_supports=1, node_attr_dim = node_attr_dim, edge_attr_dim = edge_attr_dim),
 #              KernelConv(D=D, num_supports=2, node_attr_dim = node_attr_dim, edge_attr_dim = edge_attr_dim),
@@ -581,17 +590,28 @@ class BaseKernelSetConv(Module):
 #             print(p_neighbor)
 #             print('edge_attr_neighbor')
 #             print(edge_attr_neighbor)
-                # print('===fixed_degree_sc===')
-                fixed_degree_sc = self.fixed_kernelconv_set[deg - 1](data=data)
-                # print(f'fixed_degree_sc:{fixed_degree_sc.shape}')
-                if self.trainable_kernelconv_set[deg - 1] is not None:
-                    # print('---trainable_degree_sc---')
-                    trainable_degree_sc = self.trainable_kernelconv_set[deg - 1](data=data)
-                    # print(f'trianable_degree_sc {trainable_degree_sc.shape}')
-                    degree_sc = torch.cat([fixed_degree_sc, trainable_degree_sc])
 
+
+                # print('===fixed_degree_sc===')
+                if self.fixed_kernelconv_set[deg - 1] is not None:
+                    fixed_degree_sc = self.fixed_kernelconv_set[deg - 1](data=data)
+                    if self.trainable_kernelconv_set[deg - 1] is not None:
+                        # print('---trainable_degree_sc---')
+                        trainable_degree_sc = self.trainable_kernelconv_set[deg - 1](data=data)
+                        # print(f'trianable_degree_sc {trainable_degree_sc.shape}')
+                        degree_sc = torch.cat([fixed_degree_sc, trainable_degree_sc])
+                    else:
+                        degree_sc = fixed_degree_sc
                 else:
-                    degree_sc = fixed_degree_sc
+
+                    if self.trainable_kernelconv_set[deg - 1] is not None:
+                        # print('---trainable_degree_sc---')
+                        trainable_degree_sc = self.trainable_kernelconv_set[deg - 1](data=data)
+                        # print(f'trianable_degree_sc {trainable_degree_sc.shape}')
+                        degree_sc = trainable_degree_sc
+
+                    else:
+                        raise Exception (f'both fixed and trainable kernelconv_set are None for degree {deg}')
 
                 zeros[start_row_id:start_row_id + self.num_kernel_list[deg - 1], start_col_id:start_col_id + x_focal.shape[0]] = degree_sc
 
@@ -755,6 +775,103 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
         # print(f'total number kernels:{total_num}')
         return total_num
 
+class PredefinedNHopKernelSetConv(BaseKernelSetConv):
+    '''
+    The main difference between a PredefinedNHopKernelSetConv(abbreviated as NHop for simplicity) and Predefined1HopKernelSetConv(abbreviated as 1Hop for simplicity)
+    is that 1HOP has some fixed kernels but NHop has all trainable but predefined kernels.
+    '''
+    def __init__(self, D, node_attr_dim, edge_attr_dim, L1=0, L2=0, L3=0, L4=0):
+
+        # generate functional kernels
+        # degree1 kernels
+        typical_smiles = 'C[H]'
+        typical_center_atom_id = 1
+        trainable_kernel1_list = []
+        if L1 != 0:
+            for i in range(L1):
+                trainable_kernel1 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
+                trainable_kernel1_list.append(trainable_kernel1)
+            self.trainable_kernel1 = self.cat_kernels(trainable_kernel1_list)  # generate a single tensor with L as the first dimension from the list
+            trainable_kernelconv1 = KernelConv(init_kernel=self.trainable_kernel1, requires_grad=True)  # generate the trainable KernelConv
+        else:
+            trainable_kernelconv1 = None
+        print(f'PredefinedNHopKernelSetConv: there are {L1} degree1 trainable kernels')
+
+
+        # degree2 kernels
+        # degree2 kernels
+        typical_smiles = 'CO[H]'
+        typical_center_atom_id = 1
+        trainable_kernel2_list = []
+        if L2 != 0:
+            for i in range(L2):
+                trainable_kernel2 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
+                trainable_kernel2_list.append(trainable_kernel2)
+            self.trainable_kernel2 = self.cat_kernels(trainable_kernel2_list)  # generate a single tensor with L as the first dimension from the list
+            trainable_kernelconv2 = KernelConv(init_kernel=self.trainable_kernel2, requires_grad=True)  # generate the trainable KernelConv
+        else:
+            trainable_kernelconv2 = None
+        print(f'PredefinedNHopKernelSetConv: there are {L2} degree2 trainable kernels')
+
+        # degree3 kernels
+        typical_smiles = 'C=C'
+        typical_center_atom_id = 1
+        trainable_kernel3_list = []
+        if L3 != 0:
+            for i in range(L3):
+                trainable_kernel3 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
+                trainable_kernel3_list.append(trainable_kernel3)
+            self.trainable_kernel3 = self.cat_kernels(trainable_kernel3_list)  # generate a single tensor with L as the first dimension from the list
+            trainable_kernelconv3 = KernelConv(init_kernel=self.trainable_kernel3, requires_grad=True)  # generate the trainable KernelConv
+        else:
+            trainable_kernelconv3 = None
+        print(f'PredefinedNHopKernelSetConv: there are {L3} degree3 trainable kernels')
+
+        # degree4 kernels
+        typical_smiles = 'CC'
+        typical_center_atom_id = 1
+        trainable_kernel4_list = []
+        if L4 != 0:
+            for i in range(L4):
+                trainable_kernel4 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
+                trainable_kernel4_list.append(trainable_kernel4)
+            self.trainable_kernel4 = self.cat_kernels(trainable_kernel4_list)  # generate a single tensor with L as the first dimension from the list
+            trainable_kernelconv4 = KernelConv(init_kernel=self.trainable_kernel4, requires_grad=True)  # generate the trainable KernelConv
+        else:
+            trainable_kernelconv4 = None
+        print(f'PredefinedNHopKernelSetConv: there are {L4} degree4 trainable kernels')
+
+        super(PredefinedNHopKernelSetConv, self).__init__(trainable_kernelconv1=trainable_kernelconv1, trainable_kernelconv2=trainable_kernelconv2, trainable_kernelconv3=trainable_kernelconv3, trainable_kernelconv4=trainable_kernelconv4)
+
+    def cat_kernels(self, kernel_list):
+        x_center_list = [kernel.x_center for kernel in kernel_list]
+        x_support_list = [kernel.x_support for kernel in kernel_list]
+        p_support_list = [kernel.p_support for kernel in kernel_list]
+        edge_attr_support_list = [kernel.edge_attr_support for kernel in kernel_list]
+
+        # for x_center in x_center_list:
+        #     print(x_center.shape)
+        x_center = torch.cat(x_center_list)
+        x_support = torch.cat(x_support_list)
+        p_support = torch.cat(p_support_list)
+        edge_attr_support = torch.cat(edge_attr_support_list)
+        data = Data(x_center=x_center, x_support=x_support, p_support=p_support, edge_attr_support=edge_attr_support)
+        return data
+
+    def get_num_kernel(self):
+        num_trainable_kernel = 0
+        if hasattr(self, 'trainable_kernel1'):
+            num_trainable_kernel = self.trainable_kernel1.x_center.shape[0]
+        if hasattr(self, 'trainable_kernel2'):
+            num_trainable_kernel += self.trainable_kernel2.x_center.shape[0]
+        if hasattr(self, 'trainable_kernel3'):
+            num_trainable_kernel += self.trainable_kernel3.x_center.shape[0]
+        if hasattr(self, 'trainable_kernel4'):
+            num_trainable_kernel += self.trainable_kernel4.x_center.shape[0]
+
+        total_num = num_trainable_kernel
+        # print(f'total number kernels:{total_num}')
+        return total_num
 
 # class KernelLayer(Module):
 #     '''

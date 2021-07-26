@@ -11,10 +11,12 @@ from rdkit.Chem import AllChem
 import pandas as pd
 import os
 
+import random
+
 from loader import get_atom_rep
 
 
-def generate_1hop_kernel(D, typical_compound_smiles, center_atom_id):
+def generate_1hop_kernel(D, typical_compound_smiles, center_atom_id, x_dim=None):
     #     '''
     #     given a typical compound containing a certain kernal, and the center atom id, genrate the kernel
     #     '''
@@ -45,7 +47,10 @@ def generate_1hop_kernel(D, typical_compound_smiles, center_atom_id):
 
     supports = center_atom.GetNeighbors()
 
-    x_center = get_atom_rep(center_atom.GetAtomicNum())
+    if x_dim is None:
+        x_center = get_atom_rep(center_atom.GetAtomicNum())
+    else:
+        x_center = [random.uniform(0, 1) for i in range(x_dim)]
 
     p_list = []
     x_list = []
@@ -65,7 +70,10 @@ def generate_1hop_kernel(D, typical_compound_smiles, center_atom_id):
         else:
             support_id = support_start_id
         support = all_atoms[support_id]
-        x_list.append(get_atom_rep(support.GetAtomicNum()))
+        if x_dim is None:
+            x_list.append(get_atom_rep(support.GetAtomicNum()))
+        else:
+            x_list.append([random.uniform(0, 1) for i in range(x_dim)])
         if D == 2:
             p_support = p_list.append([conf.GetAtomPosition(support_id).x - conf.GetAtomPosition(center_atom_id).x, conf.GetAtomPosition(support_id).y - conf.GetAtomPosition(center_atom_id).y])
         if D == 3:
@@ -99,6 +107,13 @@ def generate_1hop_kernel(D, typical_compound_smiles, center_atom_id):
 #     print(edge_attr_support)
     data = Data(x_center=x_center, x_support=x_support, p_support=p_support, edge_attr_support=edge_attr_support)
     return data  # x_center, x_support, p_support, edge_attr_support
+
+
+def generate_kernel_with_angle_and_length_and_edge_attr(D, typical_compound_smiles, center_atom_id, x_dim):
+    '''
+    generate a kernel with typical angle and lenth and edge_attr, but randomize x attribute
+    '''
+    return generate_1hop_kernel(D, typical_compound_smiles, center_atom_id, x_dim=x_dim)
 
 
 def read_kernel_from_csv(path):

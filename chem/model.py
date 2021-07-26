@@ -4,12 +4,12 @@ from torch_geometric.nn import MessagePassing, global_add_pool, global_mean_pool
 from torch_geometric.data import Data, DataLoader
 
 
-from kernels import Predefined1HopKernelSetConv, KernelSetConv
+from kernels import Predefined1HopKernelSetConv, PredefinedNHopKernelSetConv
 from loader import MoleculeDataset
 
 
 class MolGCN(MessagePassing):
-    def __init__(self, num_layers=5, num_kernel1=None, num_kernel2=None, num_kernel3=None, num_kernel4=None, predined_kernelsets=True, x_dim=5, p_dim=3, edge_attr_dim=1):
+    def __init__(self, num_layers=5, num_kernel1=None, num_kernel2=None, num_kernel3=None, num_kernel4=None, predined_kernelsets=True, x_dim=5, p_dim=3, edge_attr_dim=1, ):
         super(MolGCN, self).__init__(aggr='add')
         self.num_layers = num_layers
         if num_layers < 1:
@@ -17,7 +17,7 @@ class MolGCN(MessagePassing):
 
         self.layers = ModuleList()
 
-        self.num_kernerls_list = []
+        self.num_kernels_list = []
         # first layer
         if (num_kernel1 is not None) and (num_kernel2 is not None) and (num_kernel3 is not None) and (num_kernel4 is not None) and (predined_kernelsets == False):
             kernel_layer = KernelSetConv(num_kernel1, num_kernel2, num_kernel3, num_kernel4, D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_attr_dim)
@@ -29,16 +29,21 @@ class MolGCN(MessagePassing):
             raise Exception('MolGCN: num_kernel1-4 need to be specified')
 
         self.layers.append(kernel_layer)
-        self.num_kernerls_list.append(num_kernels)
-
+        self.num_kernels_list.append(num_kernels)  # num of kernels in each layer
         # second_layer
-        # x_dim = num_kernels
-        # for i in range(num_layers - 1):
-        #     kernel_layer = KernelLayer(x_dim, p_dim, edge_attr_dim, num_kernel1, num_kernel2, num_kernel3, num_kernel4)
-        #     self.layers.append(kernel_layer)
+        x_dim = num_kernels
+        for i in range(num_layers - 1):
+            # print(f'layer:{i}')
+            if (predined_kernelsets == True):
+                # print(f'num_kernels:{self.num_kernels(i)}')
+                kernel_layer = PredefinedNHopKernelSetConv(D=p_dim, node_attr_dim=self.num_kernels(i), edge_attr_dim=edge_attr_dim, L1=num_kernel1, L2=num_kernel2, L3=num_kernel3, L4=num_kernel4)
+            else:
+                kernel_layer = KernelSetConv(L1=num_kernel1, L2=num_kernel2, L3=num_kernel3, L4=num_kernel4, D=p_dim, node_attr_dim=self.num_kernels(i), edge_attr_dim=edge_attr_dim)
+            self.layers.append(kernel_layer)
+            self.num_kernels_list.append(kernel_layer.get_num_kernel())
 
     def num_kernels(self, layer):
-        return self.num_kernerls_list[layer]
+        return self.num_kernels_list[layer]
 
     def forward(self, *argv, **kwargv):
         if len(argv) != 0:
@@ -61,7 +66,7 @@ class MolGCN(MessagePassing):
         h = x
 
         for i in range(self.num_layers):
-            print(f'{i}th layer')
+            # print(f'{i}th layer')
             data.x = h
 
             kernel_layer = self.layers[i]
