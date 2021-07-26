@@ -6,7 +6,6 @@ from torch_geometric.data import DataLoader
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import WeightedRandomSampler
 
 from tqdm import tqdm
 import numpy as np
@@ -47,8 +46,8 @@ def train(args, model, device, loader, optimizer):
 
         print('pred:')
         print(pred)
-        print('y:')
-        print(y)
+        # print('y:')
+        # print(y)
 
         loss = criterion(pred, y)
         print(f'loss:{loss}')
@@ -181,25 +180,28 @@ def main():
 
     print(f'woring on {args.D}D now...')
 
-    dataset = MoleculeDataset(D=args.D, root=root, dataset=dataset)
-    print(f'dataset[0]:{dataset[0]}')
-    index = list(range(40000))  # + list(range(1000, 1500))
+    dataset = MoleculeDataset(D=D, root=root, dataset=dataset)
+    print(dataset[0])
+    index = list(range(800)) + list(range(1000, 1800))
     dataset = dataset[index]
-    print(f'dataset:{dataset}')
+    print(dataset)
 
     # ==========splitting datasets==========
     if args.split == "scaffold":
         smiles_list = pd.read_csv(
             "D:/Documents/JupyterNotebook/Hit_Explosion/data/lit-pcba/VAE/" + args.dataset.upper() + '/processed/smiles.csv', header=None)[0].tolist()
-        train_dataset, valid_dataset, test_dataset = scaffold_split(dataset, smiles_list, null_value=0, frac_train=0.8, frac_valid=0.1, frac_test=0.1)
+        train_dataset, valid_dataset, test_dataset = scaffold_split(
+            dataset, smiles_list, null_value=0, frac_train=0.8, frac_valid=0.1, frac_test=0.1)
         print("scaffold")
     elif args.split == "random":
-        train_dataset, valid_dataset, test_dataset = random_split(dataset, null_value=0, frac_train=0.8, frac_valid=0.1, frac_test=0.1, seed=args.seed)
+        train_dataset, valid_dataset, test_dataset = random_split(
+            dataset, null_value=0, frac_train=0.8, frac_valid=0.1, frac_test=0.1, seed=args.seed)
         print("random")
     elif args.split == "random_scaffold":
         smiles_list = pd.read_csv(
             'dataset/' + args.dataset + '/processed/smiles.csv', header=None)[0].tolist()
-        train_dataset, valid_dataset, test_dataset = random_scaffold_split(dataset, smiles_list, null_value=0, frac_train=0.8, frac_valid=0.1, frac_test=0.1, seed=args.seed)
+        train_dataset, valid_dataset, test_dataset = random_scaffold_split(
+            dataset, smiles_list, null_value=0, frac_train=0.8, frac_valid=0.1, frac_test=0.1, seed=args.seed)
         print("random scaffold")
     elif args.split == 'lit-pcba':
         # train_dataset
@@ -207,39 +209,25 @@ def main():
     else:
         raise ValueError("Invalid split option.")
 
-    # =======sampling dataset========
-    num_train_active = len(torch.nonzero(torch.tensor([data.y for data in train_dataset])))
-    num_train_inactive = len(train_dataset) - num_train_active
-    print(f'training size: {len(train_dataset)}, actives: {num_train_active}')
-    num_valid_active = len(torch.nonzero(torch.tensor([data.y for data in valid_dataset])))
-    num_valid_inactive = len(valid_dataset) - num_valid_active
-    print(f'valid size: {len(valid_dataset)}, actives: {num_valid_active}')
-    num_test_active = len(torch.nonzero(torch.tensor([data.y for data in test_dataset])))
-    num_test_inactive = len(test_dataset) - num_test_active
-    print(f'test size: {len(test_dataset)}, actives: {num_test_active}')
+    print(
+        f'training size: {len(train_dataset)}, actives: {len(torch.nonzero(torch.tensor([data.y for data in train_dataset])))}')
+    print(
+        f'valid size: {len(valid_dataset)}, actives: {len(torch.nonzero(torch.tensor([data.y for data in valid_dataset])))}')
+    print(
+        f'test size: {len(test_dataset)}, actives: {len(torch.nonzero(torch.tensor([data.y for data in test_dataset])))}')
 
     print('loading data')
-    train_sampler_weight = torch.tensor([(1. / num_train_inactive) if data.y == 0 else (1. / num_train_active) for data in train_dataset])
-    # valid_sampler_weight = torch.tensor([1. / num_valid_inactive, 1. / num_valid_active])
-    # test_sampler_weight = torch.tensor([1. / num_test_inactive, 1. / num_test_active])
-
-    # print(f'weights:valid total:{len(valid_sampler_weight)}, actives:{valid_sampler_weight.tolist().count(1. / num_valid_active)}, inactives:{valid_sampler_weight.tolist().count(1. / num_valid_inactive)}')
-    # print(f'weights:test total:{len(test_sampler_weight)}, actives:{test_sampler_weight.tolist().count(1. / num_test_active)}, inactives:{test_sampler_weight.tolist().count(num_test_inactive)}')
-    train_sampler = WeightedRandomSampler(train_sampler_weight, len(train_sampler_weight))
-    # valid_sampler = WeightedRandomSampler(valid_sampler_weight, len(valid_dataset))
-    # test_sampler = WeightedRandomSampler(test_sampler_weight, len(test_dataset))
-
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, sampler=train_sampler)
-    val_loader = DataLoader(valid_dataset, batch_size=len(valid_dataset), shuffle=True, num_workers=args.num_workers)  # , sampler=valid_sampler)
-    test_loader = DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False, num_workers=args.num_workers)  # , sampler=test_sampler)
+    train_loader = DataLoader(
+        train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
+    val_loader = DataLoader(valid_dataset, batch_size=len(valid_dataset),
+                            shuffle=False, num_workers=args.num_workers)
+    test_loader = DataLoader(test_dataset, batch_size=len(
+        test_dataset), shuffle=False, num_workers=args.num_workers)
     print('data loaded!')
-    # for batch in train_loader:
-    #     target = batch.y
-    #     print(f"batch index , 0/1:{len(np.where(target.numpy()==0)[0])}/{len(np.where(target.numpy()==1)[0])}")
 
     # ==========set up model==========
-    model = GNN_graphpred(num_layers=args.num_layers, num_kernel1=args.num_kernel1, num_kernel2=args.num_kernel2, num_kernel3=args.num_kernel3, num_kernel4=args.num_kernel4, x_dim=5, p_dim=args.D,
-                          edge_attr_dim=1, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling)
+    model = {MolGCN(num_layers=args.num_layers, num_kernel1=args.num_kernel1, num_kernel2=args.num_kernel2, num_kernel3=args.num_kernel3,
+                    num_kernel4=args.num_kernel4, predined_kernelsets=True, x_dim=5, p_dim=args.D, edge_attr_dim=1)}
     # # check model size
     print_model_size(model)
 
@@ -276,7 +264,7 @@ def main():
         print("====epoch " + str(epoch))
 
         loss = train(args, model, device, train_loader, optimizer)
-        logger.report_scalar(title='training loss', series='Loss', value=loss.item(), iteration=epoch)
+        logger.report_scalar(title='loss', series='Loss', value=loss.item(), iteration=epoch)
 
         print("====Evaluation")
         if args.eval_train:
@@ -284,13 +272,11 @@ def main():
         else:
             print("omit the training accuracy computation")
             train_acc = 0
-        val_acc = eval(args, model, device, val_loader)
-        test_acc = eval(args, model, device, test_loader)
+        # val_acc = eval(args, model, device, val_loader)
+        # test_acc = eval(args, model, device, test_loader)
 
-        print("train: %f val: %f test: %f" % (train_acc, val_acc, test_acc))
-        logger.report_scalar(title='enrichment', series='train_acc', value=train_acc, iteration=epoch)
-        logger.report_scalar(title='enrichment', series='valid_acc', value=val_acc, iteration=epoch)
-        logger.report_scalar(title='enrichment', series='test_acc', value=test_acc, iteration=epoch)
+        # print("train: %f val: %f test: %f" % (train_acc, val_acc, test_acc))
+
         # val_acc_list.append(val_acc)
         # test_acc_list.append(test_acc)
         # train_acc_list.append(train_acc)

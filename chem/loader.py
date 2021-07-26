@@ -191,8 +191,7 @@ class MoleculeDataset(InMemoryDataset):
         self.dataset = dataset
         self.root = root
         self.D = D
-        super(MoleculeDataset, self).__init__(root, transform, pre_transform,
-                                              pre_filter)
+        super(MoleculeDataset, self).__init__(root, transform, pre_transform, pre_filter)
         self.transform, self.pre_transform, self.pre_filter = transform, pre_transform, pre_filter
 
         if not empty:
@@ -222,6 +221,9 @@ class MoleculeDataset(InMemoryDataset):
     def download(self):
         raise NotImplementedError('Must indicate valid location of raw data. '
                                   'No download allowed')
+
+    # def __getitem__(self, index):
+    #     return self.get(index)
 
     def process(self):
         data_smiles_list = []
