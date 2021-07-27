@@ -162,6 +162,8 @@ def main():
                         help='number of workers for dataset loading')
     parser.add_argument('--D', type=int, default=3,
                         help='dimension to work on, either 2D or 3D. (default:3)')
+    parser.add_argument('--num_samples', type=int, default=-1,
+                        help='number of samples to use. It will be split into training, validation and testing. -1 means using all samples (default:-1 ')
     args = parser.parse_args()
 
     # ==========seeds==========
@@ -188,8 +190,11 @@ def main():
 
     dataset = MoleculeDataset(D=args.D, root=root, dataset=dataset)
     print(f'dataset[0]:{dataset[0]}')
-    index = list(range(1000))
-    dataset = dataset[index]
+    if args.num_samples != -1:
+        index = list(range(args.num_samples))
+        dataset = dataset[index]
+    else:
+        dataset = datset
     print(f'dataset:{dataset}')
 
     # ==========splitting datasets==========
