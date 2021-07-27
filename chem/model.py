@@ -203,8 +203,9 @@ if __name__ == "__main__":
     dataset = dataset[234:236]
 
     # model = MolGCN(num_layers = 2, num_kernel_layers = 2, x_dim = 5, p_dim =3, edge_attr_dim = 1)
-    model = GNN_graphpred(num_layers=5, num_kernel1=2, num_kernel2=1, num_kernel3=4, num_kernel4=2, x_dim=5, p_dim=D,
+    model = GNN_graphpred(num_layers=5, num_kernel1=15, num_kernel2=15, num_kernel3=15, num_kernel4=15, x_dim=5, p_dim=D,
                           edge_attr_dim=1, JK='last', drop_ratio=0.5, graph_pooling='mean', predined_kernelsets=True)
+    model.save_kernellayer('saved_kernellayers')
 
     # loader = DataLoader(dataset, batch_size=2)
     # save_score = True
