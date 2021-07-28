@@ -18,8 +18,9 @@ from customized_kernels import get_hop1_kernel_list, hop1_degree1_functional_gro
 
 torch.autograd.set_detect_anomaly(True)
 
+
 class KernelConv(Module):
-    def __init__(self, L=None, D=None, num_supports=None, node_attr_dim=None, edge_attr_dim=None, init_kernel=None, requires_grad=True, init_length_sc_weight = 0.1, init_angle_sc_weight = 0.5,  init_center_attr_sc_weight = 0.8, init_support_attr_sc_weight = 0.8, init_edge_attr_support_sc_weight=0.8, weight_requires_grad= False):
+    def __init__(self, L=None, D=None, num_supports=None, node_attr_dim=None, edge_attr_dim=None, init_kernel=None, requires_grad=True, init_length_sc_weight=0.1, init_angle_sc_weight=0.5,  init_center_attr_sc_weight=0.8, init_support_attr_sc_weight=0.8, init_edge_attr_support_sc_weight=0.8, weight_requires_grad=False):
         super(KernelConv, self).__init__()
         if init_kernel is None:
             if (L is None) or (D is None) or (num_supports is None) or (node_attr_dim is None) or (edge_attr_dim is None):
@@ -44,11 +45,11 @@ class KernelConv(Module):
 #         print(f'p_support_tensor:{p_support_tensor.shape}')
         self.p_support = Parameter(p_support_tensor, requires_grad=requires_grad)
 
-        self.length_sc_weight = Parameter(torch.tensor(init_length_sc_weight), requires_grad = weight_requires_grad)
-        self.angle_sc_weight = Parameter(torch.tensor(init_angle_sc_weight), requires_grad = weight_requires_grad)
-        self.center_attr_sc_weight = Parameter(torch.tensor(init_center_attr_sc_weight), requires_grad = weight_requires_grad)
-        self.support_attr_sc_weight = Parameter(torch.tensor(init_support_attr_sc_weight), requires_grad = weight_requires_grad)
-        self.edge_attr_support_sc_weight = Parameter(torch.tensor(init_edge_attr_support_sc_weight), requires_grad = weight_requires_grad)
+        self.length_sc_weight = Parameter(torch.tensor(init_length_sc_weight), requires_grad=weight_requires_grad)
+        self.angle_sc_weight = Parameter(torch.tensor(init_angle_sc_weight), requires_grad=weight_requires_grad)
+        self.center_attr_sc_weight = Parameter(torch.tensor(init_center_attr_sc_weight), requires_grad=weight_requires_grad)
+        self.support_attr_sc_weight = Parameter(torch.tensor(init_support_attr_sc_weight), requires_grad=weight_requires_grad)
+        self.edge_attr_support_sc_weight = Parameter(torch.tensor(init_edge_attr_support_sc_weight), requires_grad=weight_requires_grad)
 
     def get_num_kernels(self):
         return self.num_kernels
@@ -84,7 +85,7 @@ class KernelConv(Module):
             sc = torch.sum(diff, dim=dim)
         else:
             sc = torch.sum(diff)
-        sc = torch.atan(1 / (sc+1e-8))
+        sc = torch.atan(1 / (sc + 1e-8))
         return sc
 
     def get_angle_score(self, p_neighbor, p_support):
@@ -260,16 +261,11 @@ class KernelConv(Module):
         # the maxium value a arctain function can get
 
         one = torch.tensor([1], device=p_neighbor.device)
-        sc = torch.atan(1 /
-
-                        (torch.square(length_sc - one) * self.length_sc_weight +
-                         torch.square(angle_sc - one) * self.angle_sc_weight +
-                         torch.square(support_attr_sc - one) * self.support_attr_sc_weight +
-                         torch.square(center_attr_sc - one) * self.center_attr_sc_weight +
-                         torch.square(edge_attr_support_sc - one) * self.edge_attr_support_sc_weight
-                         + 1e-8
-                         ))
-
+        sc = （length_sc * self.length_sc_weight +
+            angle_sc * self.angle_sc_weight +
+            support_attr_sc * self.support_attr_sc_weight +
+            center_attr_sc * self.center_attr_sc_weight +
+            edge_attr_support_sc * self.edge_attr_support_sc_weight）/ 5
 
         # sc = torch.atan(1 /
         #                 (torch.square(length_sc - max_atan) +
@@ -279,7 +275,6 @@ class KernelConv(Module):
         #                  torch.square(edge_attr_support_sc - max_atan)
         #                  )).squeeze(0)
         sc = sc / max_atan  # normalize the score to be in [0,1]
-
 
         return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, edge_attr_support_sc
 
@@ -377,8 +372,6 @@ class BaseKernelSetConv(Module):
             if(self.num_trainable_kernel_list[i] is not None):
                 num += self.num_trainable_kernel_list[i]
             self.num_kernel_list.append(num)
-
-
 
         print(f'self.num_kernel_list:{self.num_kernel_list}')
 #         kernel_set = ModuleList(
@@ -591,7 +584,6 @@ class BaseKernelSetConv(Module):
 #             print('edge_attr_neighbor')
 #             print(edge_attr_neighbor)
 
-
                 # print('===fixed_degree_sc===')
                 if self.fixed_kernelconv_set[deg - 1] is not None:
                     fixed_degree_sc = self.fixed_kernelconv_set[deg - 1](data=data)
@@ -611,7 +603,7 @@ class BaseKernelSetConv(Module):
                         degree_sc = trainable_degree_sc
 
                     else:
-                        raise Exception (f'both fixed and trainable kernelconv_set are None for degree {deg}')
+                        raise Exception(f'both fixed and trainable kernelconv_set are None for degree {deg}')
 
                 zeros[start_row_id:start_row_id + self.num_kernel_list[deg - 1], start_col_id:start_col_id + x_focal.shape[0]] = degree_sc
 
@@ -623,8 +615,6 @@ class BaseKernelSetConv(Module):
                 start_row_id += self.num_kernel_list[deg - 1]
 
         sc = zeros
-
-
 
         index_list = torch.cat(index_list)
 
@@ -775,11 +765,13 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
         # print(f'total number kernels:{total_num}')
         return total_num
 
+
 class PredefinedNHopKernelSetConv(BaseKernelSetConv):
     '''
     The main difference between a PredefinedNHopKernelSetConv(abbreviated as NHop for simplicity) and Predefined1HopKernelSetConv(abbreviated as 1Hop for simplicity)
     is that 1HOP has some fixed kernels but NHop has all trainable but predefined kernels.
     '''
+
     def __init__(self, D, node_attr_dim, edge_attr_dim, L1=0, L2=0, L3=0, L4=0):
 
         # generate functional kernels
@@ -796,7 +788,6 @@ class PredefinedNHopKernelSetConv(BaseKernelSetConv):
         else:
             trainable_kernelconv1 = None
         print(f'PredefinedNHopKernelSetConv: there are {L1} degree1 trainable kernels')
-
 
         # degree2 kernels
         # degree2 kernels
@@ -841,7 +832,8 @@ class PredefinedNHopKernelSetConv(BaseKernelSetConv):
             trainable_kernelconv4 = None
         print(f'PredefinedNHopKernelSetConv: there are {L4} degree4 trainable kernels')
 
-        super(PredefinedNHopKernelSetConv, self).__init__(trainable_kernelconv1=trainable_kernelconv1, trainable_kernelconv2=trainable_kernelconv2, trainable_kernelconv3=trainable_kernelconv3, trainable_kernelconv4=trainable_kernelconv4)
+        super(PredefinedNHopKernelSetConv, self).__init__(trainable_kernelconv1=trainable_kernelconv1, trainable_kernelconv2=trainable_kernelconv2,
+                                                          trainable_kernelconv3=trainable_kernelconv3, trainable_kernelconv4=trainable_kernelconv4)
 
     def cat_kernels(self, kernel_list):
         x_center_list = [kernel.x_center for kernel in kernel_list]
