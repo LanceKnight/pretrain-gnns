@@ -94,9 +94,10 @@ def eval(args, model, device, loader):
     ppv_list = []
 
     for i in range(y_true.shape[1]):
-        enrichment_list.append(enrichment(y_true[:, i], y_scores[:, i]))
-        roc_auc_list.append(roc_auc(y_true[:, i], y_scores[:, i]))
-        ppv_list.append(ppv(y_true[:, i], y_scores[:, i]))
+        enrichment_list.append(enrichment(y_true, y_scores))
+        roc_auc_list.append(roc_auc(y_true, y_scores))
+        ppv_list.append(ppv(y_true, y_scores))
+        loss = criterion(y_scores, y_true)
     # for i in range(y_true.shape[1]):
     #     # AUC is only defined when there is at least one positive data.
     #     if np.sum(y_true[:, i] == 1) > 0 and np.sum(y_true[:, i] == -1) > 0:
