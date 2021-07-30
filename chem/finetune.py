@@ -27,7 +27,7 @@ from model import GNN_graphpred
 from evaluation import enrichment, roc_auc, ppv
 from util import print_model_size
 
-criterion = nn.BCEWithLogitsLoss(reduction='sum')
+criterion = nn.BCEWithLogitsLoss(reduction='mean')
 # criterion = nn.BCELoss()
 
 
