@@ -70,6 +70,7 @@ def eval(args, model, device, loader):
     model.eval()
     y_true = []
     y_scores = []
+    loss_lst = []
 
     for step, batch in enumerate(tqdm(loader, desc="Iteration")):
         batch = batch.to(device)
@@ -78,13 +79,19 @@ def eval(args, model, device, loader):
             pred, h = model(batch.x, batch.p, batch.edge_index,
                             batch.edge_attr, batch.batch)
 
-        y_true.append(batch.y.view(pred.shape))
+        y = batch.y.view(pred.shape).to(torch.float64)
+        loss = criterion(pred, y)
+        loss_lst.append(loss)
+
+        y_true.append(y)
         print(f'batch.y:{batch.y}')
 
         print(f'pred:{pred}')
         pred = torch.where(pred > 0.5, torch.ones(
             pred.shape, device=device), torch.zeros(pred.shape, device=device))
         y_scores.append(pred)
+
+    batch_loss = sum(loss_lst) / float(len(loader))
 
     y_true = torch.cat(y_true, dim=0).cpu().numpy()
     y_scores = torch.cat(y_scores, dim=0).cpu().numpy()
@@ -93,11 +100,11 @@ def eval(args, model, device, loader):
     roc_auc_list = []
     ppv_list = []
 
-    for i in range(y_true.shape[1]):
-        enrichment_list.append(enrichment(y_true, y_scores))
-        roc_auc_list.append(roc_auc(y_true, y_scores))
-        ppv_list.append(ppv(y_true, y_scores))
-        loss = criterion(y_scores, y_true)
+    print(f'y_true:{y_true.shape}')
+    enrichment_list.append(enrichment(y_true, y_scores))
+    roc_auc_list.append(roc_auc(y_true, y_scores))
+    ppv_list.append(ppv(y_true, y_scores))
+
     # for i in range(y_true.shape[1]):
     #     # AUC is only defined when there is at least one positive data.
     #     if np.sum(y_true[:, i] == 1) > 0 and np.sum(y_true[:, i] == -1) > 0:
@@ -109,7 +116,7 @@ def eval(args, model, device, loader):
         print("Some target is missing!")
         print("Missing ratio: %f" % (1 - float(len(enrichment_list)) / y_true.shape[1]))
 
-    return sum(enrichment_list) / len(enrichment_list), sum(roc_auc_list) / len(roc_auc_list), sum(ppv_list) / len(ppv_list)
+    return sum(enrichment_list) / len(enrichment_list), sum(roc_auc_list) / len(roc_auc_list), sum(ppv_list) / len(ppv_list), batch_loss
 
 
 def main():
@@ -287,7 +294,7 @@ def main():
         print("====epoch " + str(epoch))
 
         loss = train(args, model, device, train_loader, optimizer)
-        logger.report_scalar(title='training loss', series='Loss', value=loss.item(), iteration=epoch)
+        logger.report_scalar(title='loss', series='train_loss', value=loss.item(), iteration=epoch)
 
         print("====Evaluation")
         if args.eval_train:
@@ -295,8 +302,8 @@ def main():
         else:
             print("omit the training accuracy computation")
             train_enr = train_auc = train_ppv = 0
-        val_enr, val_auc, val_ppv = eval(args, model, device, val_loader)
-        test_enr, test_auc, test_ppv = eval(args, model, device, test_loader)
+        val_enr, val_auc, val_ppv, val_loss = eval(args, model, device, val_loader)
+        test_enr, test_auc, test_ppv, test_loss = eval(args, model, device, test_loader)
 
         print("enrichment:train: %f val: %f test: %f" % (train_enr, val_enr, test_enr))
         print("roc auc:train: %f val: %f test: %f" % (train_auc, val_auc, test_auc))
@@ -312,6 +319,9 @@ def main():
         logger.report_scalar(title='ppv', series='train_ppv', value=train_ppv, iteration=epoch)
         logger.report_scalar(title='ppv', series='valid_ppv', value=val_ppv, iteration=epoch)
         logger.report_scalar(title='ppv', series='test_ppv', value=test_ppv, iteration=epoch)
+
+        logger.report_scalar(title='loss', series='valid_loss', value=val_loss, iteration=epoch)
+        logger.report_scalar(title='loss', series='test_loss', value=test_loss, iteration=epoch)
 
         # val_acc_list.append(val_acc)
         # test_acc_list.append(test_acc)
