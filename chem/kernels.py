@@ -19,7 +19,7 @@ from customized_kernels import get_hop1_kernel_list, hop1_degree1_functional_gro
 torch.autograd.set_detect_anomaly(True)
 
 class KernelConv(Module):
-    def __init__(self, L=None, D=None, num_supports=None, node_attr_dim=None, edge_attr_dim=None, init_kernel=None, requires_grad=True, init_length_sc_weight = 0.1, init_angle_sc_weight = 0.5,  init_center_attr_sc_weight = 0.8, init_support_attr_sc_weight = 0.8, init_edge_attr_support_sc_weight=0.8, weight_requires_grad= False):
+    def __init__(self, L=None, D=None, num_supports=None, node_attr_dim=None, edge_attr_dim=None, init_kernel=None, requires_grad=True, init_length_sc_weight = 0.2, init_angle_sc_weight = 0.2,  init_center_attr_sc_weight = 0.2, init_support_attr_sc_weight = 0.2, init_edge_attr_support_sc_weight=0.2, weight_requires_grad= False):
         super(KernelConv, self).__init__()
         if init_kernel is None:
             if (L is None) or (D is None) or (num_supports is None) or (node_attr_dim is None) or (edge_attr_dim is None):
