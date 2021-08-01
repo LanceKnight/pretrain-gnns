@@ -260,15 +260,11 @@ class KernelConv(Module):
         # the maxium value a arctain function can get
 
         one = torch.tensor([1], device=p_neighbor.device)
-        sc = torch.atan(1 /
-
-                        (torch.square(length_sc - one) * self.length_sc_weight +
-                         torch.square(angle_sc - one) * self.angle_sc_weight +
-                         torch.square(support_attr_sc - one) * self.support_attr_sc_weight +
-                         torch.square(center_attr_sc - one) * self.center_attr_sc_weight +
-                         torch.square(edge_attr_support_sc - one) * self.edge_attr_support_sc_weight
-                         + 1e-8
-                         ))
+        sc = (length_sc * self.length_sc_weight +
+            angle_sc * self.angle_sc_weight +
+            support_attr_sc * self.support_attr_sc_weight +
+            center_attr_sc * self.center_attr_sc_weight +
+            edge_attr_support_sc * self.edge_attr_support_sc_weight)/ 5
 
 
         # sc = torch.atan(1 /
