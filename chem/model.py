@@ -24,7 +24,7 @@ class MolGCN(MessagePassing):
             num_kernels = num_kernel1_1hop + num_kernel2_1hop + num_kernel3_1hop + num_kernel4_1hop
         elif (predefined_kernelsets == True):
             kernel_layer = PredefinedKernelSetConv(D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_attr_dim, L1=num_kernel1_1hop,
-                                                   L2=num_kernel2_1hop, L3=num_kernel3_1hop, L4=num_kernel4_1hop, is_first_layer=False)
+                                                   L2=num_kernel2_1hop, L3=num_kernel3_1hop, L4=num_kernel4_1hop, is_first_layer=True)
             num_kernels = kernel_layer.get_num_kernel()
         else:
             raise Exception('MolGCN: num_kernel1-4 need to be specified')
