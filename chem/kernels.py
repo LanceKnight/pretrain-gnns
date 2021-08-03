@@ -689,9 +689,13 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
         # degree1 kernels
 
         fixed_kernel1_list = get_hop1_kernel_list(D)[0]
-        trainable_kernel1_list = [fixed_kernel1_list[0]]  # get the first one in fixed_kernel as the starting kernel as a list
+        typical_smiles = 'C[H]'
+        typical_center_atom_id = 1
+        trainable_kernel1_list = []
         if L1 != 0:
-            trainable_kernel1_list *= L1  # duplicate the one-member list to have L1 members
+            for i in range(L1):
+                trainable_kernel1 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
+                trainable_kernel1_list.append(trainable_kernel1)
             self.trainable_kernel1 = self.cat_kernels(trainable_kernel1_list)  # generate a single tensor with L as the first dimension from the list
             trainable_kernelconv1 = KernelConv(init_kernel=self.trainable_kernel1, requires_grad=True)  # generate the trainable KernelConv
         else:
@@ -702,9 +706,13 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
 
         # degree2 kernels
         fixed_kernel2_list = get_hop1_kernel_list(D)[1]
-        trainable_kernel2_list = [fixed_kernel2_list[0]]  # get the first one in fixed_kernel as the starting kernel as a list
+        typical_smiles = 'CO[H]'
+        typical_center_atom_id = 1
+        trainable_kernel2_list = []
         if L2 != 0:
-            trainable_kernel2_list *= L2  # duplicate the one-member list to have L2 members
+            for i in range(L2):
+                trainable_kernel2 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
+                trainable_kernel2_list.append(trainable_kernel2)
             self.trainable_kernel2 = self.cat_kernels(trainable_kernel2_list)  # generate a single tensor with L as the first dimension from the list
             trainable_kernelconv2 = KernelConv(init_kernel=self.trainable_kernel2, requires_grad=True)  # generate the trainable KernelConv
         else:
@@ -715,9 +723,13 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
 
         # degree3 kernels
         fixed_kernel3_list = get_hop1_kernel_list(D)[2]
-        trainable_kernel3_list = [fixed_kernel3_list[0]]  # get the first one in fixed_kernel as the starting kernel as a list
+        typical_smiles = 'C=C'
+        typical_center_atom_id = 1
+        trainable_kernel3_list = []
         if L3 != 0:
-            trainable_kernel3_list *= L3  # duplicate the one-member list to have L3 members
+            for i in range(L3):
+                trainable_kernel3 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
+                trainable_kernel3_list.append(trainable_kernel3)
             self.trainable_kernel3 = self.cat_kernels(trainable_kernel3_list)  # generate a single tensor with L as the first dimension from the list
             trainable_kernelconv3 = KernelConv(init_kernel=self.trainable_kernel3, requires_grad=True)  # generate the trainable KernelConv
         else:
@@ -728,9 +740,13 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
 
         # degree4 kernels
         fixed_kernel4_list = get_hop1_kernel_list(D)[3]
-        trainable_kernel4_list = [fixed_kernel4_list[0]]  # get the first one in fixed_kernel as the starting kernel as a list
+        typical_smiles = 'CC'
+        typical_center_atom_id = 1
+        trainable_kernel4_list = []
         if L4 != 0:
-            trainable_kernel4_list *= L4  # duplicate the one-member list to have L4 members
+            for i in range(L4):
+                trainable_kernel4 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
+                trainable_kernel4_list.append(trainable_kernel4)
             self.trainable_kernel4 = self.cat_kernels(trainable_kernel4_list)  # generate a single tensor with L as the first dimension from the list
             trainable_kernelconv4 = KernelConv(init_kernel=self.trainable_kernel4, requires_grad=True)  # generate the trainable KernelConv
         else:
