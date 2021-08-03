@@ -274,7 +274,7 @@ class KernelConv(Module):
         #                  torch.square(center_attr_sc - max_atan) +
         #                  torch.square(edge_attr_support_sc - max_atan)
         #                  )).squeeze(0)
-        sc = sc / max_atan  # normalize the score to be in [0,1]
+        # sc = sc / max_atan  # normalize the score to be in [0,1]
 
 
         return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, edge_attr_support_sc
