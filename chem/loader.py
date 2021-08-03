@@ -380,7 +380,7 @@ if __name__ == "__main__":
     # windows
     # root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
     # linux
-    root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
+    root = 'dataset/'
     if dataset == '435008' or '1798':
         root += 'qsar_benchmark2015'
         dataset = dataset

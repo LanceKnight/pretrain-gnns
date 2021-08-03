@@ -188,12 +188,12 @@ def main():
         torch.cuda.manual_seed_all(args.runseed)
 
     # ==========set up dataset==========
-    # windows
-    if platform.system() == 'Windows':
-        root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
-    # linux
-    else:
-        root = '~/projects/GCN_Syn/examples/pretrain-gnns/chem/dataset/'
+    # # windows
+    # if platform.system() == 'Windows':
+    #     root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
+    # # linux
+    # else:
+    root = 'dataset/'
     if args.dataset == '435008':
         root = root + 'qsar_benchmark2015'
         dataset = args.dataset
