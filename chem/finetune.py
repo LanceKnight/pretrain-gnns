@@ -15,11 +15,11 @@ import numpy as np
 from splitters import scaffold_split, random_split
 import pandas as pd
 
-import os
-import shutil
+# import os
+# import shutil
 import platform
 
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 
 from clearml import Task
 
@@ -286,14 +286,14 @@ def main():
     val_acc_list = []
     test_acc_list = []
 
-    if not args.filename == "":
-        fname = 'runs/finetune_cls_runseed' + \
-                str(args.runseed) + '/' + args.filename
-        # delete the directory if there exists one
-        if os.path.exists(fname):
-            shutil.rmtree(fname)
-            print("removed the existing file.")
-        writer = SummaryWriter(fname)
+    # if not args.filename == "":
+    #     fname = 'runs/finetune_cls_runseed' + \
+    #             str(args.runseed) + '/' + args.filename
+    #     # delete the directory if there exists one
+    #     if os.path.exists(fname):
+    #         shutil.rmtree(fname)
+    #         print("removed the existing file.")
+    #     writer = SummaryWriter(fname)
 
     # ==========training and evaluation==========
     for epoch in range(1, args.epochs + 1):
@@ -340,8 +340,8 @@ def main():
 
         print("")
 
-    if not args.filename == "":
-        writer.close()
+    # if not args.filename == "":
+    #     writer.close()
 
     model.save_kernellayer('saved_kernellayers')
     torch.save(model.state_dict(), "saved_models/trained_model.pth")
