@@ -142,10 +142,14 @@ def main():
                         help='weight decay (default: 0)')
     parser.add_argument('--num_layers', type=int, default=5,
                         help='number of GNN message passing layers (default: 5).')
-    parser.add_argument('--num_kernel1', type=int, default=10, help='number of kernel of degree1 (default: 10).')
-    parser.add_argument('--num_kernel2', type=int, default=10, help='number of kernel of degree2 (default: 10).')
-    parser.add_argument('--num_kernel3', type=int, default=10, help='number of kernel of degree3 (default: 10).')
-    parser.add_argument('--num_kernel4', type=int, default=10, help='number of kernel of degree4 (default: 10).')
+    parser.add_argument('--num_kernel1_1hop', type=int, default=15, help='number of kernel of degree1 (default: 15).')
+    parser.add_argument('--num_kernel2_1hop', type=int, default=15, help='number of kernel of degree2 (default: 15).')
+    parser.add_argument('--num_kernel3_1hop', type=int, default=15, help='number of kernel of degree3 (default: 15).')
+    parser.add_argument('--num_kernel4_1hop', type=int, default=15, help='number of kernel of degree4 (default: 15).')
+    parser.add_argument('--num_kernel1_Nhop', type=int, default=15, help='number of kernel of degree1 (default: 15).')
+    parser.add_argument('--num_kernel2_Nhop', type=int, default=15, help='number of kernel of degree2 (default: 15).')
+    parser.add_argument('--num_kernel3_Nhop', type=int, default=15, help='number of kernel of degree3 (default: 15).')
+    parser.add_argument('--num_kernel4_Nhop', type=int, default=15, help='number of kernel of degree4 (default: 15).')
     parser.add_argument('--dropout_ratio', type=float, default=0.5,
                         help='dropout ratio (default: 0.5)')
     parser.add_argument('--graph_pooling', type=str, default="mean",
@@ -258,7 +262,7 @@ def main():
     #     print(f"batch index , 0/1:{len(np.where(target.numpy()==0)[0])}/{len(np.where(target.numpy()==1)[0])}")
 
     # ==========set up model==========
-    model = GNN_graphpred(num_layers=args.num_layers, num_kernel1=args.num_kernel1, num_kernel2=args.num_kernel2, num_kernel3=args.num_kernel3, num_kernel4=args.num_kernel4, x_dim=5, p_dim=args.D,
+    model = GNN_graphpred(num_layers=args.num_layers, num_kernel1_1hop=args.num_kernel1_1hop, num_kernel2_1hop=args.num_kernel2_1hop, num_kernel3_1hop=args.num_kernel3_1hop, num_kernel4_1hop=args.num_kernel4_1hop, num_kernel1_Nhop=args.num_kernel1_Nhop, num_kernel2_Nhop=args.num_kernel2_Nhop, num_kernel3_Nhop=args.num_kernel3_Nhop, num_kernel4_Nhop=args.num_kernel4_Nhop, x_dim=5, p_dim=args.D,
                           edge_attr_dim=1, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling, predefined_kernelsets=args.predefined_kernelsets)
     # # check model size
     print_model_size(model)

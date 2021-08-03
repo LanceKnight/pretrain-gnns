@@ -682,13 +682,13 @@ class KernelSetConv(BaseKernelSetConv):
     def get_num_kernel(self):
         return sum(self.L)
 
-class Predefined1HopKernelSetConv(BaseKernelSetConv):
-    def __init__(self, D, node_attr_dim, edge_attr_dim, L1=0, L2=0, L3=0, L4=0):
-
+class PredefinedKernelSetConv(BaseKernelSetConv):
+    def __init__(self, D, node_attr_dim, edge_attr_dim, L1=0, L2=0, L3=0, L4=0, is_first_layer=False):
+        '''
+        if is_first_layer == True, the use the fixed kernels, otherwise, don't use fixed kernels
+        '''
         # generate functional kernels
-        # degree1 kernels
-
-        fixed_kernel1_list = get_hop1_kernel_list(D)[0]
+        # trainable
         typical_smiles = 'C[H]'
         typical_center_atom_id = 1
         trainable_kernel1_list = []
@@ -700,12 +700,18 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
             trainable_kernelconv1 = KernelConv(init_kernel=self.trainable_kernel1, requires_grad=True)  # generate the trainable KernelConv
         else:
             trainable_kernelconv1 = None
-        self.fixed_kernel1 = self.cat_kernels(fixed_kernel1_list)
-        fixed_kernelconv1 = KernelConv(init_kernel=self.fixed_kernel1, requires_grad=False)
-        print(f'Predefined1HopKernelSetConv: there are {self.fixed_kernel1.x_center.shape[0]} degree1 fixed kernels, {L1} degree1 trainable kernels')
+        # fixed
+        if is_first_layer == True:
+            fixed_kernel1_list = get_hop1_kernel_list(D)[0]
+            self.fixed_kernel1 = self.cat_kernels(fixed_kernel1_list)
+            fixed_kernelconv1 = KernelConv(init_kernel=self.fixed_kernel1, requires_grad=False)
+            print(f'PredefinedKernelSetConv: there are {self.fixed_kernel1.x_center.shape[0]} degree1 fixed kernels, {L1} degree1 trainable kernels')
+        else:
+            print(f'PredefinedKernelSetConv: there are {L1} degree1 trainable kernels')
+
 
         # degree2 kernels
-        fixed_kernel2_list = get_hop1_kernel_list(D)[1]
+        # trainable
         typical_smiles = 'CO[H]'
         typical_center_atom_id = 1
         trainable_kernel2_list = []
@@ -717,12 +723,18 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
             trainable_kernelconv2 = KernelConv(init_kernel=self.trainable_kernel2, requires_grad=True)  # generate the trainable KernelConv
         else:
             trainable_kernelconv2 = None
-        self.fixed_kernel2 = self.cat_kernels(fixed_kernel2_list)
-        fixed_kernelconv2 = KernelConv(init_kernel=self.fixed_kernel2, requires_grad=False)
-        print(f'Predefined1HopKernelSetConv: there are {self.fixed_kernel2.x_center.shape[0]} degree2 fixed kernels, {L2} degree2 trainable kernels')
+        # fixed
+        if is_first_layer == True:
+            fixed_kernel2_list = get_hop1_kernel_list(D)[1]
+            self.fixed_kernel2 = self.cat_kernels(fixed_kernel2_list)
+            fixed_kernelconv2 = KernelConv(init_kernel=self.fixed_kernel2, requires_grad=False)
+            print(f'PredefinedKernelSetConv: there are {self.fixed_kernel2.x_center.shape[0]} degree2 fixed kernels, {L2} degree2 trainable kernels')
+        else:
+            print(f'PredefinedKernelSetConv: there are {L2} degree2 trainable kernels')
+
 
         # degree3 kernels
-        fixed_kernel3_list = get_hop1_kernel_list(D)[2]
+        # trainable
         typical_smiles = 'C=C'
         typical_center_atom_id = 1
         trainable_kernel3_list = []
@@ -734,12 +746,17 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
             trainable_kernelconv3 = KernelConv(init_kernel=self.trainable_kernel3, requires_grad=True)  # generate the trainable KernelConv
         else:
             trainable_kernelconv3 = None
-        self.fixed_kernel3 = self.cat_kernels(fixed_kernel3_list)
-        fixed_kernelconv3 = KernelConv(init_kernel=self.fixed_kernel3, requires_grad=False)
-        print(f'Predefined1HopKernelSetConv: there are {self.fixed_kernel3.x_center.shape[0]} degree3 fixed kernels, {L3} degree3 trainable kernels')
+        # fixed
+        if is_first_layer == True:
+            fixed_kernel3_list = get_hop1_kernel_list(D)[2]
+            self.fixed_kernel3 = self.cat_kernels(fixed_kernel3_list)
+            fixed_kernelconv3 = KernelConv(init_kernel=self.fixed_kernel3, requires_grad=False)
+            print(f'PredefinedKernelSetConv: there are {self.fixed_kernel3.x_center.shape[0]} degree3 fixed kernels, {L3} degree3 trainable kernels')
+        else:
+            print(f'PredefinedKernelSetConv: there are {L3} degree3 trainable kernels')
 
         # degree4 kernels
-        fixed_kernel4_list = get_hop1_kernel_list(D)[3]
+        # trainable
         typical_smiles = 'CC'
         typical_center_atom_id = 1
         trainable_kernel4_list = []
@@ -751,12 +768,20 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
             trainable_kernelconv4 = KernelConv(init_kernel=self.trainable_kernel4, requires_grad=True)  # generate the trainable KernelConv
         else:
             trainable_kernelconv4 = None
-        self.fixed_kernel4 = self.cat_kernels(fixed_kernel4_list)
-        fixed_kernelconv4 = KernelConv(init_kernel=self.fixed_kernel4, requires_grad=False)
-        print(f'Predefined1HopKernelSetConv: there are {self.fixed_kernel4.x_center.shape[0]} degree4 fixed kernels, {L4} degree4 trainable kernels')
+        # fixed
+        if is_first_layer == True:
+            fixed_kernel4_list = get_hop1_kernel_list(D)[3]
+            self.fixed_kernel4 = self.cat_kernels(fixed_kernel4_list)
+            fixed_kernelconv4 = KernelConv(init_kernel=self.fixed_kernel4, requires_grad=False)
+            print(f'PredefinedKernelSetConv: there are {self.fixed_kernel4.x_center.shape[0]} degree4 fixed kernels, {L4} degree4 trainable kernels')
+        else:
+            print(f'PredefinedKernelSetConv: there are {L4} degree4 trainable kernels')
 
-        super(Predefined1HopKernelSetConv, self).__init__(fixed_kernelconv1, fixed_kernelconv2, fixed_kernelconv3,
+        if is_first_layer == True:
+            super(PredefinedKernelSetConv, self).__init__(fixed_kernelconv1, fixed_kernelconv2, fixed_kernelconv3,
                                                           fixed_kernelconv4, trainable_kernelconv1, trainable_kernelconv2, trainable_kernelconv3, trainable_kernelconv4)
+        else:
+            super(PredefinedKernelSetConv, self).__init__(trainable_kernelconv1=trainable_kernelconv1, trainable_kernelconv2=trainable_kernelconv2, trainable_kernelconv3=trainable_kernelconv3, trainable_kernelconv4=trainable_kernelconv4)
 
     def cat_kernels(self, kernel_list):
         x_center_list = [kernel.x_center for kernel in kernel_list]
@@ -774,117 +799,125 @@ class Predefined1HopKernelSetConv(BaseKernelSetConv):
         return data
 
     def get_num_kernel(self):
-        num_trainable_kernel = 0
+        num_kernel = 0
         if hasattr(self, 'trainable_kernel1'):
-            num_trainable_kernel = self.trainable_kernel1.x_center.shape[0]
+            num_kernel = self.trainable_kernel1.x_center.shape[0]
         if hasattr(self, 'trainable_kernel2'):
-            num_trainable_kernel += self.trainable_kernel2.x_center.shape[0]
+            num_kernel += self.trainable_kernel2.x_center.shape[0]
         if hasattr(self, 'trainable_kernel3'):
-            num_trainable_kernel += self.trainable_kernel3.x_center.shape[0]
+            num_kernel += self.trainable_kernel3.x_center.shape[0]
         if hasattr(self, 'trainable_kernel4'):
-            num_trainable_kernel += self.trainable_kernel4.x_center.shape[0]
+            num_kernel += self.trainable_kernel4.x_center.shape[0]
 
-        total_num = self.fixed_kernel1.x_center.shape[0] + self.fixed_kernel2.x_center.shape[0] + self.fixed_kernel3.x_center.shape[0] + self.fixed_kernel4.x_center.shape[0] + num_trainable_kernel
+        if hasattr(self, 'fixed_kernel1'):
+            num_kernel += self.fixed_kernel1.x_center.shape[0]
+        if hasattr(self, 'fixed_kernel2'):
+            num_kernel += self.fixed_kernel2.x_center.shape[0]
+        if hasattr(self, 'fixed_kernel3'):
+            num_kernel += self.fixed_kernel3.x_center.shape[0]
+        if hasattr(self, 'fixed_kernel4'):
+            num_kernel += self.fixed_kernel4.x_center.shape[0]
+        # total_num = self.fixed_kernel1.x_center.shape[0] + self.fixed_kernel2.x_center.shape[0] + self.fixed_kernel3.x_center.shape[0] + self.fixed_kernel4.x_center.shape[0] + num_trainable_kernel
         # print(f'total number kernels:{total_num}')
-        return total_num
+        return num_kernel
 
-class PredefinedNHopKernelSetConv(BaseKernelSetConv):
-    '''
-    The main difference between a PredefinedNHopKernelSetConv(abbreviated as NHop for simplicity) and Predefined1HopKernelSetConv(abbreviated as 1Hop for simplicity)
-    is that 1HOP has some fixed kernels but NHop has all trainable but predefined kernels.
-    '''
-    def __init__(self, D, node_attr_dim, edge_attr_dim, L1=0, L2=0, L3=0, L4=0):
+# class PredefinedNHopKernelSetConv(BaseKernelSetConv):
+#     '''
+#     The main difference between a PredefinedNHopKernelSetConv(abbreviated as NHop for simplicity) and Predefined1HopKernelSetConv(abbreviated as 1Hop for simplicity)
+#     is that 1HOP has some fixed kernels but NHop has all trainable but predefined kernels.
+#     '''
+#     def __init__(self, D, node_attr_dim, edge_attr_dim, L1=0, L2=0, L3=0, L4=0):
 
-        # generate functional kernels
-        # degree1 kernels
-        typical_smiles = 'C[H]'
-        typical_center_atom_id = 1
-        trainable_kernel1_list = []
-        if L1 != 0:
-            for i in range(L1):
-                trainable_kernel1 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
-                trainable_kernel1_list.append(trainable_kernel1)
-            self.trainable_kernel1 = self.cat_kernels(trainable_kernel1_list)  # generate a single tensor with L as the first dimension from the list
-            trainable_kernelconv1 = KernelConv(init_kernel=self.trainable_kernel1, requires_grad=True)  # generate the trainable KernelConv
-        else:
-            trainable_kernelconv1 = None
-        print(f'PredefinedNHopKernelSetConv: there are {L1} degree1 trainable kernels')
+#         # generate functional kernels
+#         # degree1 kernels
+#         typical_smiles = 'C[H]'
+#         typical_center_atom_id = 1
+#         trainable_kernel1_list = []
+#         if L1 != 0:
+#             for i in range(L1):
+#                 trainable_kernel1 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
+#                 trainable_kernel1_list.append(trainable_kernel1)
+#             self.trainable_kernel1 = self.cat_kernels(trainable_kernel1_list)  # generate a single tensor with L as the first dimension from the list
+#             trainable_kernelconv1 = KernelConv(init_kernel=self.trainable_kernel1, requires_grad=True)  # generate the trainable KernelConv
+#         else:
+#             trainable_kernelconv1 = None
+#         print(f'PredefinedNHopKernelSetConv: there are {L1} degree1 trainable kernels')
 
 
-        # degree2 kernels
-        # degree2 kernels
-        typical_smiles = 'CO[H]'
-        typical_center_atom_id = 1
-        trainable_kernel2_list = []
-        if L2 != 0:
-            for i in range(L2):
-                trainable_kernel2 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
-                trainable_kernel2_list.append(trainable_kernel2)
-            self.trainable_kernel2 = self.cat_kernels(trainable_kernel2_list)  # generate a single tensor with L as the first dimension from the list
-            trainable_kernelconv2 = KernelConv(init_kernel=self.trainable_kernel2, requires_grad=True)  # generate the trainable KernelConv
-        else:
-            trainable_kernelconv2 = None
-        print(f'PredefinedNHopKernelSetConv: there are {L2} degree2 trainable kernels')
+#         # degree2 kernels
+#         # degree2 kernels
+#         typical_smiles = 'CO[H]'
+#         typical_center_atom_id = 1
+#         trainable_kernel2_list = []
+#         if L2 != 0:
+#             for i in range(L2):
+#                 trainable_kernel2 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
+#                 trainable_kernel2_list.append(trainable_kernel2)
+#             self.trainable_kernel2 = self.cat_kernels(trainable_kernel2_list)  # generate a single tensor with L as the first dimension from the list
+#             trainable_kernelconv2 = KernelConv(init_kernel=self.trainable_kernel2, requires_grad=True)  # generate the trainable KernelConv
+#         else:
+#             trainable_kernelconv2 = None
+#         print(f'PredefinedNHopKernelSetConv: there are {L2} degree2 trainable kernels')
 
-        # degree3 kernels
-        typical_smiles = 'C=C'
-        typical_center_atom_id = 1
-        trainable_kernel3_list = []
-        if L3 != 0:
-            for i in range(L3):
-                trainable_kernel3 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
-                trainable_kernel3_list.append(trainable_kernel3)
-            self.trainable_kernel3 = self.cat_kernels(trainable_kernel3_list)  # generate a single tensor with L as the first dimension from the list
-            trainable_kernelconv3 = KernelConv(init_kernel=self.trainable_kernel3, requires_grad=True)  # generate the trainable KernelConv
-        else:
-            trainable_kernelconv3 = None
-        print(f'PredefinedNHopKernelSetConv: there are {L3} degree3 trainable kernels')
+#         # degree3 kernels
+#         typical_smiles = 'C=C'
+#         typical_center_atom_id = 1
+#         trainable_kernel3_list = []
+#         if L3 != 0:
+#             for i in range(L3):
+#                 trainable_kernel3 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
+#                 trainable_kernel3_list.append(trainable_kernel3)
+#             self.trainable_kernel3 = self.cat_kernels(trainable_kernel3_list)  # generate a single tensor with L as the first dimension from the list
+#             trainable_kernelconv3 = KernelConv(init_kernel=self.trainable_kernel3, requires_grad=True)  # generate the trainable KernelConv
+#         else:
+#             trainable_kernelconv3 = None
+#         print(f'PredefinedNHopKernelSetConv: there are {L3} degree3 trainable kernels')
 
-        # degree4 kernels
-        typical_smiles = 'CC'
-        typical_center_atom_id = 1
-        trainable_kernel4_list = []
-        if L4 != 0:
-            for i in range(L4):
-                trainable_kernel4 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
-                trainable_kernel4_list.append(trainable_kernel4)
-            self.trainable_kernel4 = self.cat_kernels(trainable_kernel4_list)  # generate a single tensor with L as the first dimension from the list
-            trainable_kernelconv4 = KernelConv(init_kernel=self.trainable_kernel4, requires_grad=True)  # generate the trainable KernelConv
-        else:
-            trainable_kernelconv4 = None
-        print(f'PredefinedNHopKernelSetConv: there are {L4} degree4 trainable kernels')
+#         # degree4 kernels
+#         typical_smiles = 'CC'
+#         typical_center_atom_id = 1
+#         trainable_kernel4_list = []
+#         if L4 != 0:
+#             for i in range(L4):
+#                 trainable_kernel4 = generate_kernel_with_angle_and_length_and_edge_attr(D, typical_smiles, typical_center_atom_id, node_attr_dim)
+#                 trainable_kernel4_list.append(trainable_kernel4)
+#             self.trainable_kernel4 = self.cat_kernels(trainable_kernel4_list)  # generate a single tensor with L as the first dimension from the list
+#             trainable_kernelconv4 = KernelConv(init_kernel=self.trainable_kernel4, requires_grad=True)  # generate the trainable KernelConv
+#         else:
+#             trainable_kernelconv4 = None
+#         print(f'PredefinedNHopKernelSetConv: there are {L4} degree4 trainable kernels')
 
-        super(PredefinedNHopKernelSetConv, self).__init__(trainable_kernelconv1=trainable_kernelconv1, trainable_kernelconv2=trainable_kernelconv2, trainable_kernelconv3=trainable_kernelconv3, trainable_kernelconv4=trainable_kernelconv4)
+#         super(PredefinedNHopKernelSetConv, self).__init__(trainable_kernelconv1=trainable_kernelconv1, trainable_kernelconv2=trainable_kernelconv2, trainable_kernelconv3=trainable_kernelconv3, trainable_kernelconv4=trainable_kernelconv4)
 
-    def cat_kernels(self, kernel_list):
-        x_center_list = [kernel.x_center for kernel in kernel_list]
-        x_support_list = [kernel.x_support for kernel in kernel_list]
-        p_support_list = [kernel.p_support for kernel in kernel_list]
-        edge_attr_support_list = [kernel.edge_attr_support for kernel in kernel_list]
+#     def cat_kernels(self, kernel_list):
+#         x_center_list = [kernel.x_center for kernel in kernel_list]
+#         x_support_list = [kernel.x_support for kernel in kernel_list]
+#         p_support_list = [kernel.p_support for kernel in kernel_list]
+#         edge_attr_support_list = [kernel.edge_attr_support for kernel in kernel_list]
 
-        # for x_center in x_center_list:
-        #     print(x_center.shape)
-        x_center = torch.cat(x_center_list)
-        x_support = torch.cat(x_support_list)
-        p_support = torch.cat(p_support_list)
-        edge_attr_support = torch.cat(edge_attr_support_list)
-        data = Data(x_center=x_center, x_support=x_support, p_support=p_support, edge_attr_support=edge_attr_support)
-        return data
+#         # for x_center in x_center_list:
+#         #     print(x_center.shape)
+#         x_center = torch.cat(x_center_list)
+#         x_support = torch.cat(x_support_list)
+#         p_support = torch.cat(p_support_list)
+#         edge_attr_support = torch.cat(edge_attr_support_list)
+#         data = Data(x_center=x_center, x_support=x_support, p_support=p_support, edge_attr_support=edge_attr_support)
+#         return data
 
-    def get_num_kernel(self):
-        num_trainable_kernel = 0
-        if hasattr(self, 'trainable_kernel1'):
-            num_trainable_kernel = self.trainable_kernel1.x_center.shape[0]
-        if hasattr(self, 'trainable_kernel2'):
-            num_trainable_kernel += self.trainable_kernel2.x_center.shape[0]
-        if hasattr(self, 'trainable_kernel3'):
-            num_trainable_kernel += self.trainable_kernel3.x_center.shape[0]
-        if hasattr(self, 'trainable_kernel4'):
-            num_trainable_kernel += self.trainable_kernel4.x_center.shape[0]
+#     def get_num_kernel(self):
+#         num_trainable_kernel = 0
+#         if hasattr(self, 'trainable_kernel1'):
+#             num_trainable_kernel = self.trainable_kernel1.x_center.shape[0]
+#         if hasattr(self, 'trainable_kernel2'):
+#             num_trainable_kernel += self.trainable_kernel2.x_center.shape[0]
+#         if hasattr(self, 'trainable_kernel3'):
+#             num_trainable_kernel += self.trainable_kernel3.x_center.shape[0]
+#         if hasattr(self, 'trainable_kernel4'):
+#             num_trainable_kernel += self.trainable_kernel4.x_center.shape[0]
 
-        total_num = num_trainable_kernel
-        # print(f'total number kernels:{total_num}')
-        return total_num
+#         total_num = num_trainable_kernel
+#         # print(f'total number kernels:{total_num}')
+#         return total_num
 
 # class KernelLayer(Module):
 #     '''
