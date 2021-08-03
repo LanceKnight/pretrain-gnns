@@ -678,8 +678,9 @@ class KernelSetConv(BaseKernelSetConv):
 
         kernelconv3 = KernelConv(L=L3, D=D, num_supports=3, node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
         kernelconv4 = KernelConv(L=L4, D=D, num_supports=4, node_attr_dim=node_attr_dim, edge_attr_dim=edge_attr_dim)
-        super(KernelSetConv, self).__init__(kernelconv1, kernelconv2, kernelconv3, kernelconv4)
-
+        super(KernelSetConv, self).__init__(trainable_kernelconv1= kernelconv1, trainable_kernelconv2=kernelconv2, trainable_kernelconv3=kernelconv3, trainable_kernelconv4=kernelconv4)
+    def get_num_kernel(self):
+        return sum(self.L)
 
 class Predefined1HopKernelSetConv(BaseKernelSetConv):
     def __init__(self, D, node_attr_dim, edge_attr_dim, L1=0, L2=0, L3=0, L4=0):
@@ -895,5 +896,8 @@ class PredefinedNHopKernelSetConv(BaseKernelSetConv):
 if __name__ == "__main__":
     print('testing')
     model = Predefined1HopKernelSetConv(D=2, node_attr_dim=5, edge_attr_dim=1, L1=2, L2=3, L3=4, L4=2)
-    num = model.get_num_kernel()
-    print(num)
+    model = KernelSetConv(D=2, node_attr_dim = 5, edge_attr_dim = 1, L1=15, L2=15, L3=15, L4=15)
+    for param in model.parameters():
+        print(param)
+    # num = model.get_num_kernel()
+    # print(num)

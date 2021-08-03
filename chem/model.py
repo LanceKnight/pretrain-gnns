@@ -4,12 +4,12 @@ from torch_geometric.nn import MessagePassing, global_add_pool, global_mean_pool
 from torch_geometric.data import Data, DataLoader
 
 
-from kernels import Predefined1HopKernelSetConv, PredefinedNHopKernelSetConv
+from kernels import Predefined1HopKernelSetConv, PredefinedNHopKernelSetConv, KernelSetConv
 from loader import MoleculeDataset
 
 
 class MolGCN(MessagePassing):
-    def __init__(self, num_layers=5, num_kernel1=None, num_kernel2=None, num_kernel3=None, num_kernel4=None, predined_kernelsets=True, x_dim=5, p_dim=3, edge_attr_dim=1, ):
+    def __init__(self, num_layers=5, num_kernel1=None, num_kernel2=None, num_kernel3=None, num_kernel4=None, predefined_kernelsets=True, x_dim=5, p_dim=3, edge_attr_dim=1, ):
         super(MolGCN, self).__init__(aggr='add')
         self.num_layers = num_layers
         if num_layers < 1:
@@ -19,10 +19,10 @@ class MolGCN(MessagePassing):
 
         self.num_kernels_list = []
         # first layer
-        if (num_kernel1 is not None) and (num_kernel2 is not None) and (num_kernel3 is not None) and (num_kernel4 is not None) and (predined_kernelsets == False):
+        if (num_kernel1 is not None) and (num_kernel2 is not None) and (num_kernel3 is not None) and (num_kernel4 is not None) and (predefined_kernelsets == False):
             kernel_layer = KernelSetConv(num_kernel1, num_kernel2, num_kernel3, num_kernel4, D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_attr_dim)
             num_kernels = num_kernel1 + num_kernel2 + num_kernel3 + num_kernel4
-        elif (predined_kernelsets == True):
+        elif (predefined_kernelsets == True):
             kernel_layer = Predefined1HopKernelSetConv(D=p_dim, node_attr_dim=x_dim, edge_attr_dim=edge_attr_dim, L1=num_kernel1, L2=num_kernel2, L3=num_kernel3, L4=num_kernel4)
             num_kernels = kernel_layer.get_num_kernel()
         else:
@@ -34,7 +34,7 @@ class MolGCN(MessagePassing):
         x_dim = num_kernels
         for i in range(num_layers - 1):
             # print(f'layer:{i}')
-            if (predined_kernelsets == True):
+            if (predefined_kernelsets == True):
                 # print(f'num_kernels:{self.num_kernels(i)}')
                 kernel_layer = PredefinedNHopKernelSetConv(D=p_dim, node_attr_dim=self.num_kernels(i), edge_attr_dim=edge_attr_dim, L1=num_kernel1, L2=num_kernel2, L3=num_kernel3, L4=num_kernel4)
             else:
@@ -98,7 +98,7 @@ class GNN_graphpred(torch.nn.Module):
     JK-net: https://arxiv.org/abs/1806.03536
     """
 
-    def __init__(self, num_layers=1, num_kernel1=0, num_kernel2=0, num_kernel3=0, num_kernel4=0, predined_kernelsets=True, x_dim=5, p_dim=3, edge_attr_dim=1, JK="last", drop_ratio=0, graph_pooling="mean"):
+    def __init__(self, num_layers=1, num_kernel1=0, num_kernel2=0, num_kernel3=0, num_kernel4=0, predefined_kernelsets=True, x_dim=5, p_dim=3, edge_attr_dim=1, JK="last", drop_ratio=0, graph_pooling="mean"):
         super(GNN_graphpred, self).__init__()
         self.num_layers = num_layers
         self.drop_ratio = drop_ratio
@@ -109,7 +109,7 @@ class GNN_graphpred(torch.nn.Module):
             raise ValueError("GNN_graphpred: Number of GNN layers must be greater than 0.")
 
         self.gnn = MolGCN(num_layers=num_layers, num_kernel1=num_kernel1, num_kernel2=num_kernel2, num_kernel3=num_kernel3,
-                          num_kernel4=num_kernel4, x_dim=x_dim, p_dim=p_dim, edge_attr_dim=edge_attr_dim, predined_kernelsets=predined_kernelsets)
+                          num_kernel4=num_kernel4, x_dim=x_dim, p_dim=p_dim, edge_attr_dim=edge_attr_dim, predefined_kernelsets=predefined_kernelsets)
 
         # Different kind of graph pooling
         if graph_pooling == "sum":
@@ -204,7 +204,7 @@ if __name__ == "__main__":
 
     # model = MolGCN(num_layers = 2, num_kernel_layers = 2, x_dim = 5, p_dim =3, edge_attr_dim = 1)
     model = GNN_graphpred(num_layers=5, num_kernel1=15, num_kernel2=15, num_kernel3=15, num_kernel4=15, x_dim=5, p_dim=D,
-                          edge_attr_dim=1, JK='last', drop_ratio=0.5, graph_pooling='mean', predined_kernelsets=False)
+                          edge_attr_dim=1, JK='last', drop_ratio=0.5, graph_pooling='mean', predefined_kernelsets=False)
     model.save_kernellayer('saved_kernellayers')
 
     # loader = DataLoader(dataset, batch_size=2)

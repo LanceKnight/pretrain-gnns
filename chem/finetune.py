@@ -170,6 +170,8 @@ def main():
                         help='number of workers for dataset loading')
     parser.add_argument('--D', type=int, default=3,
                         help='dimension to work on, either 2D or 3D. (default:3)')
+    parser.add_argument('--predefined_kernelsets', type=int, default=0,
+                        help='use predefined_kernelsets or not. (default:false)')
     parser.add_argument('--num_samples', type=int, default=-1,
                         help='number of samples to use. It will be split into training, validation and testing. -1 means using all samples (default:-1 ')
     args = parser.parse_args()
@@ -257,7 +259,7 @@ def main():
 
     # ==========set up model==========
     model = GNN_graphpred(num_layers=args.num_layers, num_kernel1=args.num_kernel1, num_kernel2=args.num_kernel2, num_kernel3=args.num_kernel3, num_kernel4=args.num_kernel4, x_dim=5, p_dim=args.D,
-                          edge_attr_dim=1, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling)
+                          edge_attr_dim=1, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling, predefined_kernelsets=args.predefined_kernelsets)
     # # check model size
     print_model_size(model)
 
