@@ -17,7 +17,9 @@ import pandas as pd
 
 # import os
 # import shutil
-import platform
+# import platform
+
+from datetime import datetime
 
 # from tensorboardX import SummaryWriter
 
@@ -26,6 +28,8 @@ from clearml import Task
 from model import GNN_graphpred
 from evaluation import enrichment, roc_auc, ppv
 from util import print_model_size
+
+time_stamp = datetime.now().strftime("%b-%d-%Y_%H:%M:%S")
 
 criterion = nn.BCEWithLogitsLoss(reduction='mean')
 # criterion = nn.BCELoss()
@@ -296,7 +300,7 @@ def main():
     #     writer = SummaryWriter(fname)
 
     # ==========training and evaluation==========
-    model.save_kernellayer('init_kernellayers')
+    model.save_kernellayer('init_kernellayers', time_stamp)
     for epoch in range(1, args.epochs + 1):
         print("====epoch " + str(epoch))
 
@@ -344,8 +348,8 @@ def main():
     # if not args.filename == "":
     #     writer.close()
 
-    model.save_kernellayer('saved_kernellayers')
-    torch.save(model.state_dict(), "saved_models/trained_model.pth")
+    model.save_kernellayer('saved_kernellayers', time_stamp)
+    torch.save(model.state_dict(), f"saved_models/{time_stamp}_trained_model.pth")
 
 
 if __name__ == "__main__":

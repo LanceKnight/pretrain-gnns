@@ -3,6 +3,7 @@ from torch.nn import ModuleList
 from torch_geometric.nn import MessagePassing, global_add_pool, global_mean_pool, global_max_pool, GlobalAttention, Set2Set
 from torch_geometric.data import Data, DataLoader
 
+from datetime import datetime
 
 from kernels import PredefinedKernelSetConv, KernelSetConv
 from loader import MoleculeDataset
@@ -154,12 +155,12 @@ class GNN_graphpred(torch.nn.Module):
         # self.gnn = GNN(self.num_layer, self.emb_dim, JK = self.JK, drop_ratio = self.drop_ratio)
         self.gnn.load_state_dict(torch.load(model_file))
 
-    def save_kernellayer(self, path):
+    def save_kernellayer(self, path, time_stamp):
         layers = self.gnn.layers
         print(f'{self.D}D, there are {len(layers)} layers')
         for i, layer in enumerate(layers):
             print(f'saving {i}th layer')
-            torch.save(layer.state_dict(), f'{path}/{i}th_layer.pth')
+            torch.save(layer.state_dict(), f'{path}/{time_stamp}_{i}th_layer.pth')
 
     def forward(self, *argv, save_score=False):
         if len(argv) == 5:
