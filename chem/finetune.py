@@ -296,6 +296,7 @@ def main():
     #     writer = SummaryWriter(fname)
 
     # ==========training and evaluation==========
+    model.save_kernellayer('init_kernellayers')
     for epoch in range(1, args.epochs + 1):
         print("====epoch " + str(epoch))
 
