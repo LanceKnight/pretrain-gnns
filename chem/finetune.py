@@ -268,6 +268,10 @@ def main():
     # ==========set up model==========
     model = GNN_graphpred(num_layers=args.num_layers, num_kernel1_1hop=args.num_kernel1_1hop, num_kernel2_1hop=args.num_kernel2_1hop, num_kernel3_1hop=args.num_kernel3_1hop, num_kernel4_1hop=args.num_kernel4_1hop, num_kernel1_Nhop=args.num_kernel1_Nhop, num_kernel2_Nhop=args.num_kernel2_Nhop, num_kernel3_Nhop=args.num_kernel3_Nhop, num_kernel4_Nhop=args.num_kernel4_Nhop, x_dim=5, p_dim=args.D,
                           edge_attr_dim=1, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling, predefined_kernelsets=args.predefined_kernelsets)
+    if torch.cuda.device_count() > 1:
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        model = nn.DataParallel(model)
+
     # # check model size
     print_model_size(model)
 
