@@ -29,7 +29,7 @@ from model import GNN_graphpred
 from evaluation import enrichment, roc_auc, ppv
 from util import print_model_size
 
-time_stamp = datetime.now().strftime("%b-%d-%Y_%H:%M:%S")
+time_stamp = datetime.now().strftime("%b-%d-%Y_%Hh%Mm%Ss")
 
 criterion = nn.BCEWithLogitsLoss(reduction='mean')
 # criterion = nn.BCELoss()
