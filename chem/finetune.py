@@ -198,7 +198,7 @@ def main():
     # # linux
     # else:
     root = 'dataset/'
-    if args.dataset == '435008':
+    if args.dataset == '435008' or '435034':
         root = root + 'qsar_benchmark2015'
         dataset = args.dataset
     else:
@@ -273,7 +273,7 @@ def main():
         model = nn.DataParallel(model)
 
     # # check model size
-    print_model_size(model)
+    # print_model_size(model)
 
     if not args.input_model_file == "":
         model.from_pretrained(args.input_model_file)
@@ -304,7 +304,7 @@ def main():
     #     writer = SummaryWriter(fname)
 
     # ==========training and evaluation==========
-    model.save_kernellayer('init_kernellayers', time_stamp)
+    # model.save_kernellayer('init_kernellayers', time_stamp)
     for epoch in range(1, args.epochs + 1):
         print("====epoch " + str(epoch))
 
@@ -352,8 +352,8 @@ def main():
     # if not args.filename == "":
     #     writer.close()
 
-    model.save_kernellayer('saved_kernellayers', time_stamp)
-    torch.save(model.state_dict(), f"saved_models/{time_stamp}_trained_model.pth")
+    # model.save_kernellayer('saved_kernellayers', time_stamp)
+    # torch.save(model.state_dict(), f"saved_models/{time_stamp}_trained_model.pth")
 
 
 if __name__ == "__main__":

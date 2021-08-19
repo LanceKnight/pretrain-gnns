@@ -135,7 +135,8 @@ def smiles2graph(D, smiles):
         if D == 2:
             atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y])
         elif D == 3:
-            atom_pos.append([conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z])
+            atom_pos.append([conf.GetAtomPosition(
+                i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z])
         atom_attr.append(h)
 
     # get bond attributes
@@ -259,7 +260,8 @@ class MoleculeDataset(InMemoryDataset):
 
         # write data_smiles_list in processed paths
         data_smiles_series = pd.Series(data_smiles_list)
-        data_smiles_series.to_csv(os.path.join(self.processed_dir, f'{self.dataset}-smiles.csv'), index=False, header=False)
+        data_smiles_series.to_csv(os.path.join(
+            self.processed_dir, f'{self.dataset}-smiles.csv'), index=False, header=False)
 
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
@@ -268,95 +270,95 @@ class MoleculeDataset(InMemoryDataset):
 # is pcba_pretrain
 
 
-class SDFBenchmakr2015(InMemoryDataset):
-    def __init__(self,
-                 root,
-                 D=3,
-                 transform=None,
-                 pre_transform=None,
-                 pre_filter=None,
-                 dataset='435008',
-                 empty=False):
+# class SDFBenchmakr2015(InMemoryDataset):
+#     def __init__(self,
+#                  root,
+#                  D=3,
+#                  transform=None,
+#                  pre_transform=None,
+#                  pre_filter=None,
+#                  dataset='435008',
+#                  empty=False):
 
-        self.dataset = dataset
-        self.root = root
-        self.D = D
-        super(SDFBenchmakr2015, self).__init__(root, transform, pre_transform,
-                                               pre_filter)
-        self.transform, self.pre_transform, self.pre_filter = transform, pre_transform, pre_filter
+#         self.dataset = dataset
+#         self.root = root
+#         self.D = D
+#         super(SDFBenchmakr2015, self).__init__(root, transform, pre_transform,
+#                                                pre_filter)
+#         self.transform, self.pre_transform, self.pre_filter = transform, pre_transform, pre_filter
 
-        if not empty:
-            self.data, self.slices = torch.load(self.processed_paths[0])
+#         if not empty:
+#             self.data, self.slices = torch.load(self.processed_paths[0])
 
-    @ property
-    def raw_file_names(self):
-        file_name_list = os.listdir(self.raw_dir)
-        # assert len(file_name_list) == 1     # currently assume we have a
-        # # single raw file
-        return file_name_list
+#     @ property
+#     def raw_file_names(self):
+#         file_name_list = os.listdir(self.raw_dir)
+#         # assert len(file_name_list) == 1     # currently assume we have a
+#         # # single raw file
+#         return file_name_list
 
-    @ property
-    def processed_file_names(self):
-        return f'geometric_data_processed-{self.D}D.pt'
+#     @ property
+#     def processed_file_names(self):
+#         return f'geometric_data_processed-{self.D}D.pt'
 
-    def download(self):
-        raise NotImplementedError('Must indicate valid location of raw data. '
-                                  'No download allowed')
+#     def download(self):
+#         raise NotImplementedError('Must indicate valid location of raw data. '
+#                                   'No download allowed')
 
-    def process(self):
-        data_smiles_list = []
-        data_list = []
+#     def process(self):
+#         data_smiles_list = []
+#         data_list = []
 
-        if self.dataset == '435008':
-            for file, label in [(f'{self.dataset}_actives_clean.smi', 1),
-                                (f'{self.dataset}_inactives_clean.smi', 0)]:
-                smiles_path = os.path.join(self.root, 'raw', file)
-                smiles_list = pd.read_csv(smiles_path, sep='\t', header=None)[0]
+#         if self.dataset == '435008':
+#             for file, label in [(f'{self.dataset}_actives_clean.smi', 1),
+#                                 (f'{self.dataset}_inactives_clean.smi', 0)]:
+#                 smiles_path = os.path.join(self.root, 'raw', file)
+#                 smiles_list = pd.read_csv(smiles_path, sep='\t', header=None)[0]
 
-                for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
-                    smi = smiles_list[i]
+#                 for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
+#                     smi = smiles_list[i]
 
-                    data = smiles2graph(2, smi)
-                    if data is None:
-                        continue
-                    data.id = torch.tensor([i])
-                    data.y = torch.tensor([label])
-                    data.smiles = smi
-                    # print(data)
-                    data_list.append(data)
-                    data_smiles_list.append(smiles_list[i])
+#                     data = smiles2graph(2, smi)
+#                     if data is None:
+#                         continue
+#                     data.id = torch.tensor([i])
+#                     data.y = torch.tensor([label])
+#                     data.smiles = smi
+#                     # print(data)
+#                     data_list.append(data)
+#                     data_smiles_list.append(smiles_list[i])
 
-        else:
-            raise ValueError('Invalid dataset name')
+#         else:
+#             raise ValueError('Invalid dataset name')
 
-        if self.pre_filter is not None:
-            data_list = [data for data in data_list if self.pre_filter(data)]
+#         if self.pre_filter is not None:
+#             data_list = [data for data in data_list if self.pre_filter(data)]
 
-        if self.pre_transform is not None:
-            data_list = [self.pre_transform(data) for data in data_list]
+#         if self.pre_transform is not None:
+#             data_list = [self.pre_transform(data) for data in data_list]
 
-        # write data_smiles_list in processed paths
-        data_smiles_series = pd.Series(data_smiles_list)
-        data_smiles_series.to_csv(os.path.join(self.processed_dir,
-                                               'smiles.csv'), index=False,
-                                  header=False)
+#         # write data_smiles_list in processed paths
+#         data_smiles_series = pd.Series(data_smiles_list)
+#         data_smiles_series.to_csv(os.path.join(self.processed_dir,
+#                                                'smiles.csv'), index=False,
+#                                   header=False)
 
-        data, slices = self.collate(data_list)
-        torch.save((data, slices), self.processed_paths[0])
+#         data, slices = self.collate(data_list)
+#         torch.save((data, slices), self.processed_paths[0])
 
 
-def create_circular_fingerprint(mol, radius, size, chirality):
-    """
+# def create_circular_fingerprint(mol, radius, size, chirality):
+#     """
 
-    :param mol:
-    :param radius:
-    :param size:
-    :param chirality:
-    :return: np array of morgan fingerprint
-    """
-    fp = GetMorganFingerprintAsBitVect(mol, radius,
-                                       nBits=size, useChirality=chirality)
-    return np.array(fp)
+#     :param mol:
+#     :param radius:
+#     :param size:
+#     :param chirality:
+#     :return: np array of morgan fingerprint
+#     """
+#     fp = GetMorganFingerprintAsBitVect(mol, radius,
+#                                        nBits=size, useChirality=chirality)
+#     return np.array(fp)
 
 
 def smiles_cleaner(smiles):
