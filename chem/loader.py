@@ -12,8 +12,8 @@ from rdkit.Chem import AllChem
 # from rdkit import DataStructs
 from rdkit.Chem.rdMolDescriptors import GetMorganFingerprintAsBitVect
 from torch.utils import data
-from torch_geometric.data import Data
-from torch_geometric.data import InMemoryDataset
+from torch_geometric.data import Data, InMemoryDataset
+from torch_geometric.utils import degree
 # from torch_geometric.data import Batch
 # from itertools import repeat, product, chain
 from tqdm import tqdm
@@ -230,7 +230,7 @@ class MoleculeDataset(InMemoryDataset):
         data_smiles_list = []
         data_list = []
 
-        if self.dataset not in ['435008', '1798']:
+        if self.dataset not in ['435008', '1798', '435034']:
             raise ValueError('Invalid dataset name')
 
         for file, label in [(f'{self.dataset}_actives.smi', 1),
@@ -240,6 +240,7 @@ class MoleculeDataset(InMemoryDataset):
                 smiles_path, sep='\t', header=None)[0]
 
             for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
+            # for i in tqdm(range(1)):
                 smi = smiles_list[i]
 
                 data = smiles2graph(2, smi)
@@ -256,6 +257,7 @@ class MoleculeDataset(InMemoryDataset):
             data_list = [data for data in data_list if self.pre_filter(data)]
 
         if self.pre_transform is not None:
+            print('doing pre_transforming...')
             data_list = [self.pre_transform(data) for data in data_list]
 
         # write data_smiles_list in processed paths
@@ -263,6 +265,8 @@ class MoleculeDataset(InMemoryDataset):
         data_smiles_series.to_csv(os.path.join(
             self.processed_dir, f'{self.dataset}-smiles.csv'), index=False, header=False)
 
+        for data in data_list:
+            print(data)
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
@@ -374,26 +378,136 @@ def smiles_cleaner(smiles):
     return new_smiles
 
 
+class ToIndexAndEdgeAttrForDeg(object):
+    '''
+    Calculate the focal index and neighbor indices for each degree and store them in focal_index and nei_index.
+    Also calculate neighboring edge attr for each degree nei_edge_attr.
+    These operations are very expensive to run on the fly
+    '''
 
-# test MoleculeDataset object
+    def get_neighbor_index(self, edge_index, center_index):
+        #         print('edge_index')
+        #         print(edge_index)
+        #         print('\n')
+        #         print('center_index')
+        #         print(center_index)
+        a = edge_index[0]
+        b = a.unsqueeze(1) == center_index
+        c = torch.nonzero(b)
+        d = c[:, 0]
+        return edge_index[1, d]
+
+    def get_degree_index(self, x, edge_index):
+        # print(f'edge_index:{edge_index.shape}, x:{x.shape}')
+        deg = degree(edge_index[0], x.shape[0])
+        return deg
+
+    def get_edge_attr_support_from_center_node(self, edge_attr, edge_index, center_index):
+        a = edge_index[0]
+        b = a.unsqueeze(1) == center_index
+        c = torch.nonzero(b)
+        d = c[:, 0]
+
+        # normalize bond id
+        e = (d / 2).long()
+#         bond_id = torch.cat([torch.stack((2*x, 2*x+1)) for x in e])
+        bond_id = torch.tensor([2 * x for x in e], device=a.device)
+#         print('bond_id')
+#         print(bond_id)
+
+        # select bond attributes with the bond id
+        nei_edge_attr = torch.index_select(input=edge_attr, dim=0, index=bond_id)
+
+        return nei_edge_attr
+
+    def __call__(self, data):
+        x = data.x
+        edge_index = data.edge_index
+        edge_attr = data.edge_attr
+
+        deg_index = self.get_degree_index(x, edge_index)
+
+        deg = 1
+        data.focal_index_deg1 = (deg_index == deg).nonzero(as_tuple=True)[0]
+        num_focal = len(data.focal_index_deg1)
+        nei_index_deg1_list = []
+        nei_edge_attr_deg1_list = []
+        for i in range(num_focal):
+            nei_index_deg1_list.append(self.get_neighbor_index(edge_index, data.focal_index_deg1[i]))
+            nei_edge_attr_deg1_list.append(self.get_edge_attr_support_from_center_node(edge_attr, edge_index, data.focal_index_deg1[i]))
+        if len(nei_index_deg1_list) != 0:
+            data.nei_index_deg1 = torch.stack(nei_index_deg1_list, dim=0).T
+            data.nei_edge_attr_deg1 = torch.stack(nei_edge_attr_deg1_list, dim=0)
+        else:
+            data.nei_index_deg1 = torch.Tensor()
+            data.nei_edge_attr_deg1 = torch.Tensor()
+
+        deg = 2
+        data.focal_index_deg2 = (deg_index == deg).nonzero(as_tuple=True)[0]
+        num_focal = len(data.focal_index_deg2)
+        nei_index_deg2_list = []
+        nei_edge_attr_deg2_list = []
+        for i in range(num_focal):
+            nei_index_deg2_list.append(self.get_neighbor_index(edge_index, data.focal_index_deg2[i]))
+            nei_edge_attr_deg2_list.append(self.get_edge_attr_support_from_center_node(edge_attr, edge_index, data.focal_index_deg2[i]))
+        if len(nei_index_deg2_list) != 0:
+            data.nei_index_deg2 = torch.stack(nei_index_deg2_list, dim=0).T
+            data.nei_edge_attr_deg2 = torch.stack(nei_edge_attr_deg2_list, dim=0)
+        else:
+            data.nei_index_deg2 = torch.Tensor()
+            data.nei_edge_attr_deg2 = torch.Tensor()
+
+        deg = 3
+        data.focal_index_deg3 = (deg_index == deg).nonzero(as_tuple=True)[0]
+        num_focal = len(data.focal_index_deg3)
+        nei_index_deg3_list = []
+        nei_edge_attr_deg3_list = []
+        for i in range(num_focal):
+            nei_index_deg3_list.append(self.get_neighbor_index(edge_index, data.focal_index_deg3[i]))
+            nei_edge_attr_deg3_list.append(self.get_edge_attr_support_from_center_node(edge_attr, edge_index, data.focal_index_deg3[i]))
+        if len(nei_index_deg3_list) != 0:
+            data.nei_index_deg3 = torch.stack(nei_index_deg3_list, dim=0).T
+            data.nei_edge_attr_deg3 = torch.stack(nei_edge_attr_deg3_list, dim=0)
+        else:
+            data.nei_index_deg3 = torch.Tensor()
+            data.nei_edge_attr_deg3 = torch.Tensor()
+
+        deg = 4
+        data.focal_index_deg4 = (deg_index == deg).nonzero(as_tuple=True)[0]
+        num_focal = len(data.focal_index_deg4)
+        nei_index_deg4_list = []
+        nei_edge_attr_deg4_list = []
+        for i in range(num_focal):
+            nei_index_deg4_list.append(self.get_neighbor_index(edge_index, data.focal_index_deg4[i]))
+            nei_edge_attr_deg4_list.append(self.get_edge_attr_support_from_center_node(edge_attr, edge_index, data.focal_index_deg4[i]))
+        if len(nei_index_deg4_list) != 0:
+            data.nei_index_deg4 = torch.stack(nei_index_deg4_list, dim=0).T
+            data.nei_edge_attr_deg4 = torch.stack(nei_edge_attr_deg4_list, dim=0)
+        else:
+            data.nei_index_deg4 = torch.Tensor()
+            data.nei_edge_attr_deg4 = torch.Tensor()
+
+        return data
+
+        # test MoleculeDataset object
 if __name__ == "__main__":
     print('testing...')
-    dataset = '435008'
+    dataset = '435034'
     # windows
     # root = 'D:/Documents/JupyterNotebook/GCN_property/pretrain-gnns/chem/dataset/'
     # linux
     root = 'dataset/'
-    if dataset == '435008' or '1798':
+    if dataset == '435008' or '1798' or '435034':
         root += 'qsar_benchmark2015'
         dataset = dataset
     else:
         raise Exception('cannot find dataset')
-    dataset = MoleculeDataset(D=2, root=root, dataset=dataset)
+    dataset = MoleculeDataset(D=2, root=root, dataset=dataset, pre_transform=ToIndexAndEdgeAttrForDeg())
     print(dataset[0])
 
     data = dataset[0]
     print(data.x)
-    print(data.p)
-    print(data.edge_index)
-    print(data.edge_attr)
+    # print(data.p)
+    # print(data.edge_index)
+    # print(data.edge_attr)
     # create_all_datasets()

@@ -28,6 +28,7 @@ from clearml import Task
 from model import GNN_graphpred
 from evaluation import enrichment, roc_auc, ppv
 from util import print_model_size
+from loader import ToIndexAndEdgeAttrForDeg
 
 time_stamp = datetime.now().strftime("%b-%d-%Y_%Hh%Mm%Ss")
 
@@ -45,8 +46,17 @@ def train(args, model, device, loader, optimizer):
 
         batch = batch.to(device)
 
+        for smi in batch.smiles:
+            print(f'smi:{smi}')
+        print(f'batch:{batch.batch}')
+
         pred, h = model(batch.x, batch.p, batch.edge_index,
-                        batch.edge_attr, batch.batch)
+                        batch.edge_attr, batch.batch,
+                        batch.focal_index_deg1, batch.focal_index_deg2, batch.focal_index_deg3, batch.focal_index_deg4,
+                        batch.nei_index_deg1, batch.nei_index_deg2, batch.nei_index_deg3, batch.nei_index_deg4,
+                        batch.nei_edge_attr_deg1, batch.nei_edge_attr_deg2, batch.nei_edge_attr_deg3, batch.nei_edge_attr_deg4
+
+                        )
         y = batch.y.view(pred.shape).to(torch.float64)
 
         # print('pred:')
@@ -206,7 +216,7 @@ def main():
 
     print(f'woring on {args.D}D now...')
 
-    dataset = MoleculeDataset(D=args.D, root=root, dataset=dataset)
+    dataset = MoleculeDataset(D=args.D, root=root, dataset=dataset, pre_transform=ToIndexAndEdgeAttrForDeg())
     print(f'dataset[0]:{dataset[0]}')
     if args.num_samples != -1:
         index = list(range(args.num_samples))

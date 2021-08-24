@@ -53,18 +53,46 @@ class MolGCN(MessagePassing):
         if len(argv) != 0:
             raise Exception('Kernel does not take positional argument, use keyword argument instead. e.g. model(data=data)')
 
-        if len(kwargv) == 1:
+        if len(kwargv) == 2:
             x = kwargv['data'].x
             edge_index = kwargv['data'].edge_index
             edge_attr = kwargv['data'].edge_attr
             p = kwargv['data'].p
-
+            focal_index_deg1 = kwargv['data'].focal_index_deg1
+            focal_index_deg2 = kwargv['data'].focal_index_deg2
+            focal_index_deg3 = kwargv['data'].focal_index_deg3
+            focal_index_deg4 = kwargv['data'].focal_index_deg4
+            nei_index_deg1 = kwargv['data'].nei_index_deg1
+            nei_index_deg2 = kwargv['data'].nei_index_deg2
+            nei_index_deg3 = kwargv['data'].nei_index_deg3
+            nei_index_deg4 = kwargv['data'].nei_index_deg4
+            nei_edge_attr_deg1 = kwargv['data'].nei_edge_attr_deg1
+            nei_edge_attr_deg2 = kwargv['data'].nei_edge_attr_deg2
+            nei_edge_attr_deg3 = kwargv['data'].nei_edge_attr_deg3
+            nei_edge_attr_deg4 = kwargv['data'].nei_edge_attr_deg4
+            save_score = kwargv['save_score']
         else:
             x = kwargv['x']
             edge_index = kwargv['edge_index']
             edge_attr = kwargv['edge_attr']
             p = kwargv['p']
-            data = Data(x=x, p=p, edge_index=edge_index, edge_attr=edge_attr)
+            focal_index_deg1 = kwargv['focal_index_deg1']
+            focal_index_deg2 = kwargv['focal_index_deg2']
+            focal_index_deg3 = kwargv['focal_index_deg3']
+            focal_index_deg4 = kwargv['focal_index_deg4']
+            nei_index_deg1 = kwargv['nei_index_deg1']
+            nei_index_deg2 = kwargv['nei_index_deg2']
+            nei_index_deg3 = kwargv['nei_index_deg3']
+            nei_index_deg4 = kwargv['nei_index_deg4']
+            nei_edge_attr_deg1 = kwargv['nei_edge_attr_deg1']
+            nei_edge_attr_deg2 = kwargv['nei_edge_attr_deg2']
+            nei_edge_attr_deg3 = kwargv['nei_edge_attr_deg3']
+            nei_edge_attr_deg4 = kwargv['nei_edge_attr_deg4']
+            data = Data(x=x, p=p, edge_index=edge_index, edge_attr=edge_attr,
+                        focal_index_deg1=focal_index_deg1, focal_index_deg2=focal_index_deg2, focal_index_deg3=focal_index_deg3, focal_index_deg4=focal_index_deg4,
+                        nei_index_deg1=nei_index_deg1, nei_index_deg2=nei_index_deg2, nei_index_deg3=nei_index_deg3, nei_index_deg4=nei_index_deg4,
+                        nei_edge_attr_deg1=nei_edge_attr_deg1, nei_edge_attr_deg2=nei_edge_attr_deg2, nei_edge_attr_deg3=nei_edge_attr_deg3, nei_edge_attr_deg4=nei_edge_attr_deg4
+                        )
             # print(f'foward: data.x{data.x}')
             save_score = kwargv['save_score']
         h = x
@@ -163,15 +191,36 @@ class GNN_graphpred(torch.nn.Module):
             torch.save(layer.state_dict(), f'{path}/{time_stamp}_{i}th_layer.pth')
 
     def forward(self, *argv, save_score=False):
-        if len(argv) == 5:
-            x, p, edge_index, edge_attr, batch = argv[0], argv[1], argv[2], argv[3], argv[4]
+        if len(argv) == 17:
+            x, p, edge_index, edge_attr, batch, \
+                focal_index_deg1, focal_index_deg2, focal_index_deg3, focal_index_deg4,\
+                nei_index_deg1, nei_index_deg2, nei_index_deg3, nei_index_deg4,\
+                nei_edge_attr_deg1, nei_edge_attr_deg2, nei_edge_attr_deg3, nei_edge_attr_deg4\
+                =\
+                argv[0], argv[1], argv[2], argv[3], argv[4],\
+                argv[5], argv[6], argv[7], argv[8], \
+                argv[9], argv[10], argv[11], argv[12], \
+                argv[13], argv[14], argv[15], argv[16]
         elif len(argv) == 1:
             data = argv[0]
-            x, p, edge_index, edge_attr, batch = data.x, data.p, data.edge_index, data.edge_attr, data.batch
+            x, p, edge_index, edge_attr, batch,\
+                focal_index_deg1, focal_index_deg2, focal_index_deg3, focal_index_deg4,\
+                nei_index_deg1, nei_index_deg2, nei_index_deg3, nei_index_deg4,\
+                nei_edge_attr_deg1, nei_edge_attr_deg2, nei_edge_attr_deg3, nei_edge_attr_deg4\
+                = \
+                data.x, data.p, data.edge_index, data.edge_attr, data.batch,\
+                data.focal_index_deg1, data.focal_index_deg2, data.focal_index_deg3, data.focal_index_deg4,\
+                data.nei_index_deg1, data.nei_index_deg2, data.nei_index_deg3, data.nei_index_deg4,\
+                data.nei_edge_attr_deg1, data.nei_edge_attr_deg2, data.nei_edge_attr_deg3, data.nei_edge_attr_deg4
         else:
             raise ValueError("unmatched number of arguments.")
 
-        node_representation = self.gnn(x=x, edge_index=edge_index, edge_attr=edge_attr, p=p, save_score=save_score)
+        node_representation = self.gnn(x=x, edge_index=edge_index, edge_attr=edge_attr, p=p,
+                                       focal_index_deg1=focal_index_deg1, focal_index_deg2=focal_index_deg2, focal_index_deg3=focal_index_deg3, focal_index_deg4=focal_index_deg4,
+                                       nei_index_deg1=nei_index_deg1, nei_index_deg2=nei_index_deg2, nei_index_deg3=nei_index_deg3, nei_index_deg4=nei_index_deg4,
+                                       nei_edge_attr_deg1=nei_edge_attr_deg1, nei_edge_attr_deg2=nei_edge_attr_deg2, nei_edge_attr_deg3=nei_edge_attr_deg3, nei_edge_attr_deg4=nei_edge_attr_deg4,
+
+                                       save_score=save_score)
         # print(f'node_rep:{node_representation.shape}')
         graph_representation = self.pool(node_representation, batch)
         # print(f'graph_rep:{graph_representation.shape}')

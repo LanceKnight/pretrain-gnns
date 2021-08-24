@@ -400,7 +400,9 @@ class BaseKernelSetConv(Module):
 
 
 
-	def get_neighbor_nodes_and_edges_of_degree(self, x, p, edge_index, edge_attr, focal_index, nei_index , nei_edge_attr):
+	def get_neighbor_nodes_and_edges_of_degree(self, x, p, edge_index, edge_attr,\
+		focal_index=focal_index, nei_index = nei_index, nei_edge_attr=nei_edge_attr
+		):
 		'''
 		inputs:
 		deg: the query degree
@@ -419,31 +421,35 @@ class BaseKernelSetConv(Module):
 		nei_x_list = []
 		nei_p_list = []
 		nei_edge_attr_list = []
-		print(f'nei_index:{torch.squeeze(nei_index.T)}')	   
+	   
 
-		nei_x = torch.index_select(x, 0, torch.squeeze(nei_index.T))
+		nei_x = torch.index_select(x, 0, nei_index)
 #             print(f'nei_x:{nei_x.shape}')
-		nei_p = torch.index_select(p, 0, torch.squeeze(nei_index.T))
+		nei_p = torch.index_select(p, 0, nei_index)
 #             print(f'nei_p:{nei_p.shape}')
 	   
 
 		return nei_x, nei_p, nei_edge_attr
 
-	def convert_graph_to_receptive_field(self, deg, x, p, edge_index, edge_attr, focal_index_deg1, focal_index_deg2, focal_index_deg3, focal_index_deg4, nei_index_deg1, nei_index_deg2, nei_index_deg3, nei_index_deg4, nei_edge_attr_deg1, nei_edge_attr_deg2, nei_edge_attr_deg3, nei_edge_attr_deg4):
+	def convert_graph_to_receptive_field(self, deg, x, p, edge_index, edge_attr,
+		focal_index_deg1, focal_index_deg2, focal_index_deg3, focal_index_deg4,
+		nei_index_deg1, nei_index_deg2, nei_index_deg3, nei_index_deg4,
+		nei_edge_attr_deg1, nei_edge_attr_deg2, nei_edge_attr_deg3, nei_edge_attr_deg4
+		):
 		if deg == 1:
-			focal_index = focal_index_deg1
+			local_index = focal_index_deg1
 			nei_index = nei_index_deg1
 			nei_edge_attr = nei_edge_attr_deg1
 		if deg == 2:
-			focal_index = focal_index_deg2
+			local_index = focal_index_deg2
 			nei_index = nei_index_deg2
 			nei_edge_attr = nei_edge_attr_deg2
 		if deg == 3:
-			focal_index = focal_index_deg3
+			local_index = focal_index_deg3
 			nei_index = nei_index_deg3
 			nei_edge_attr = nei_edge_attr_deg3
 		if deg == 4:
-			focal_index = focal_index_deg4
+			local_index = focal_index_deg4
 			nei_index = nei_index_deg4
 			nei_edge_attr = nei_edge_attr_deg4
 
@@ -558,7 +564,7 @@ class BaseKernelSetConv(Module):
 		start_row_id = 0
 		start_col_id = 0
 		for deg in range(1, 5):
-			print(f'deg:{deg}')
+			# print(f'deg:{deg}')
 			receptive_field = self.convert_graph_to_receptive_field(
 				deg, x, p, edge_index, edge_attr, 
 				focal_index_deg1, focal_index_deg2, focal_index_deg3, focal_index_deg4,
