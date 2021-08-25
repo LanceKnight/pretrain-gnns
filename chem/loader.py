@@ -229,7 +229,7 @@ class MoleculeDataset(InMemoryDataset):
         data_smiles_list = []
         data_list = []
 
-        if self.dataset not in ['435008', '1798']:
+        if self.dataset not in ['435008', '1798', '435034']:
             raise ValueError('Invalid dataset name')
 
         for file, label in [(f'{self.dataset}_actives.smi', 1),
@@ -241,7 +241,7 @@ class MoleculeDataset(InMemoryDataset):
             for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
                 smi = smiles_list[i]
 
-                data = smiles2graph(2, smi)
+                data = smiles2graph(self.D, smi)
                 if data is None:
                     continue
                 data.id = torch.tensor([i])

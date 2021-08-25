@@ -198,7 +198,7 @@ def main():
     # # linux
     # else:
     root = 'dataset/'
-    if args.dataset == '435008':
+    if args.dataset == '435008' or '435034':
         root = root + 'qsar_benchmark2015'
         dataset = args.dataset
     else:

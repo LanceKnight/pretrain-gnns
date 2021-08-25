@@ -454,7 +454,7 @@ class BaseKernelSetConv(Module):
         nei_edge_attr_list = []
         for i in range(num_focal):
             nei_index = self.get_neighbor_index(edge_index, center_index[i])
-#             print(f'nei_index:{nei_index.shape}')
+            print(f'nei_index:{nei_index.shape}')
 
             nei_x = torch.index_select(x, 0, nei_index)
 #             print(f'nei_x:{nei_x.shape}')
