@@ -386,82 +386,82 @@ class BaseKernelSetConv(Module):
 
 
 
-	def get_focal_nodes_of_degree(self, x, p, edge_index, focal_index):
-		'''
-		outputs
-		ori_x: a feature matrix that only contains rows (i.e. the center node) having certain degree
-		ori_p: a position matrix that only contains rows (i.e. the center node) having certain degree
-		'''
-		selected_index = focal_index
-		x_focal = torch.index_select(input=x, dim=0, index=selected_index[0])
-		p_focal = torch.index_select(input=p, dim=0, index=selected_index[0])
+# 	def get_focal_nodes_of_degree(self, x, p, edge_index, focal_index):
+# 		'''
+# 		outputs
+# 		ori_x: a feature matrix that only contains rows (i.e. the center node) having certain degree
+# 		ori_p: a position matrix that only contains rows (i.e. the center node) having certain degree
+# 		'''
+# 		selected_index = focal_index
+# 		x_focal = torch.index_select(input=x, dim=0, index=selected_index[0])
+# 		p_focal = torch.index_select(input=p, dim=0, index=selected_index[0])
 
-		return x_focal, p_focal, selected_index[0]
-
-
-
-	def get_neighbor_nodes_and_edges_of_degree(self, x, p, edge_index, edge_attr, focal_index, nei_index , nei_edge_attr):
-		'''
-		inputs:
-		deg: the query degree
-		num_focal: the number of focal nodes of degree deg in the graph
-
-		outputs:
-		nei_x: a feature matrix that only contains rows (i.e. the neighboring node) that its center node has certain degree
-		nei_p: a position matrix that only contains rows (i.e. the neighboring node) that its center node has certain degree
-		'''
+# 		return x_focal, p_focal, selected_index[0]
 
 
-		num_focal = len(focal_index)
-#         print('center_index')
-#         print(center_index)
 
-		nei_x_list = []
-		nei_p_list = []
-		nei_edge_attr_list = []
-		print(f'nei_index:{torch.squeeze(nei_index.T)}')	   
+# 	def get_neighbor_nodes_and_edges_of_degree(self, x, p, edge_index, edge_attr, focal_index, nei_index , nei_edge_attr):
+# 		'''
+# 		inputs:
+# 		deg: the query degree
+# 		num_focal: the number of focal nodes of degree deg in the graph
 
-		nei_x = torch.index_select(x, 0, torch.squeeze(nei_index.T))
-#             print(f'nei_x:{nei_x.shape}')
-		nei_p = torch.index_select(p, 0, torch.squeeze(nei_index.T))
-#             print(f'nei_p:{nei_p.shape}')
+# 		outputs:
+# 		nei_x: a feature matrix that only contains rows (i.e. the neighboring node) that its center node has certain degree
+# 		nei_p: a position matrix that only contains rows (i.e. the neighboring node) that its center node has certain degree
+# 		'''
+
+
+# 		num_focal = len(focal_index)
+# #         print('center_index')
+# #         print(center_index)
+
+# 		nei_x_list = []
+# 		nei_p_list = []
+# 		nei_edge_attr_list = []
+# 		print(f'nei_index:{torch.squeeze(nei_index.T)}')	   
+
+# 		nei_x = torch.index_select(x, 0, torch.squeeze(nei_index.T))
+# #             print(f'nei_x:{nei_x.shape}')
+# 		nei_p = torch.index_select(p, 0, torch.squeeze(nei_index.T))
+# #             print(f'nei_p:{nei_p.shape}')
 	   
 
-		return nei_x, nei_p, nei_edge_attr
+# 		return nei_x, nei_p, nei_edge_attr
 
-	def convert_graph_to_receptive_field(self, deg, x, p, edge_index, edge_attr, focal_index_deg1, focal_index_deg2, focal_index_deg3, focal_index_deg4, nei_index_deg1, nei_index_deg2, nei_index_deg3, nei_index_deg4, nei_edge_attr_deg1, nei_edge_attr_deg2, nei_edge_attr_deg3, nei_edge_attr_deg4):
-		if deg == 1:
-			focal_index = focal_index_deg1
-			nei_index = nei_index_deg1
-			nei_edge_attr = nei_edge_attr_deg1
-		if deg == 2:
-			focal_index = focal_index_deg2
-			nei_index = nei_index_deg2
-			nei_edge_attr = nei_edge_attr_deg2
-		if deg == 3:
-			focal_index = focal_index_deg3
-			nei_index = nei_index_deg3
-			nei_edge_attr = nei_edge_attr_deg3
-		if deg == 4:
-			focal_index = focal_index_deg4
-			nei_index = nei_index_deg4
-			nei_edge_attr = nei_edge_attr_deg4
+# 	def convert_graph_to_receptive_field(self, deg, x, p, edge_index, edge_attr):
+# 		if deg == 1:
+# 			focal_index = focal_index_deg1
+# 			nei_index = nei_index_deg1
+# 			nei_edge_attr = nei_edge_attr_deg1
+# 		if deg == 2:
+# 			focal_index = focal_index_deg2
+# 			nei_index = nei_index_deg2
+# 			nei_edge_attr = nei_edge_attr_deg2
+# 		if deg == 3:
+# 			focal_index = focal_index_deg3
+# 			nei_index = nei_index_deg3
+# 			nei_edge_attr = nei_edge_attr_deg3
+# 		if deg == 4:
+# 			focal_index = focal_index_deg4
+# 			nei_index = nei_index_deg4
+# 			nei_edge_attr = nei_edge_attr_deg4
 
 
-		x_focal, p_focal, selected_index = self.get_focal_nodes_of_degree(
-			x=x, p=p, edge_index=edge_index, focal_index = focal_index)
+# 		x_focal, p_focal, selected_index = self.get_focal_nodes_of_degree(
+# 			x=x, p=p, edge_index=edge_index, focal_index = focal_index)
 
-		num_focal = x_focal.shape[0]
-		# print(f'num_focal:{num_focal}')
-		if num_focal != 0:
-			x_neighbor, p_neighbor, edge_attr_neighbor = self.get_neighbor_nodes_and_edges_of_degree(
-				x=x, edge_index=edge_index, p=p, edge_attr=edge_attr,
-				focal_index=focal_index, nei_index = nei_index, nei_edge_attr=nei_edge_attr
-				)
-#             print(f'x_neighbor:{x_neighbor.shape}')
-#             print(f'p_neighbor:{p_neighbor.shape}')
-			return x_focal, p_focal, x_neighbor, p_neighbor, edge_attr_neighbor, selected_index
-		return None
+# 		num_focal = x_focal.shape[0]
+# 		# print(f'num_focal:{num_focal}')
+# 		if num_focal != 0:
+# 			x_neighbor, p_neighbor, edge_attr_neighbor = self.get_neighbor_nodes_and_edges_of_degree(
+# 				x=x, edge_index=edge_index, p=p, edge_attr=edge_attr,
+# 				focal_index=focal_index, nei_index = nei_index, nei_edge_attr=nei_edge_attr
+# 				)
+# #             print(f'x_neighbor:{x_neighbor.shape}')
+# #             print(f'p_neighbor:{p_neighbor.shape}')
+# 			return x_focal, p_focal, x_neighbor, p_neighbor, edge_attr_neighbor, selected_index
+# 		return None
 
 	def get_reorder_index(self, index):
 		'''
@@ -509,18 +509,13 @@ class BaseKernelSetConv(Module):
 			edge_index = kwargv['data'].edge_index
 			edge_attr = kwargv['data'].edge_attr
 			p = kwargv['data'].p
-			focal_index_deg1 = kwargv['data'].focal_index_deg1
-			focal_index_deg2 = kwargv['data'].focal_index_deg2
-			focal_index_deg3 = kwargv['data'].focal_index_deg3
-			focal_index_deg4 = kwargv['data'].focal_index_deg4
-			nei_index_deg1 = kwargv['data'].nei_index_deg1
-			nei_index_deg2 = kwargv['data'].nei_index_deg2
-			nei_index_deg3 = kwargv['data'].nei_index_deg3
-			nei_index_deg4 = kwargv['data'].nei_index_deg4
-			nei_edge_attr_deg1 = kwargv['data'].nei_edge_attr_deg1
-			nei_edge_attr_deg2 = kwargv['data'].nei_edge_attr_deg2
-			nei_edge_attr_deg3 = kwargv['data'].nei_edge_attr_deg3
-			nei_edge_attr_deg4 = kwargv['data'].nei_edge_attr_deg4
+
+			x_focal_list = [kwargv['data'].x_focal_deg1, kwargv['data'].x_focal_deg2, kwargv['data'].x_focal_deg3, kwargv['data'].x_focal_deg4]
+			p_focal_list = [kwargv['data'].p_focal_deg1, kwargv['data'].p_focal_deg2, kwargv['data'].p_focal_deg3, kwargv['data'].p_focal_deg4]
+			nei_x_list = [kwargv['data'].nei_x_deg1, kwargv['data'].nei_x_deg2, kwargv['data'].nei_x_deg3, kwargv['data'].nei_x_deg4]
+			nei_p_list = [kwargv['data'].nei_p_deg1, kwargv['data'].nei_p_deg2, kwargv['data'].nei_p_deg3, kwargv['data'].nei_p_deg4]
+			nei_edge_attr_list = [kwargv['data'].nei_edge_attr_deg1, kwargv['data'].nei_edge_attr_deg2, kwargv['data'].nei_edge_attr_deg3, kwargv['data'].nei_edge_attr_deg4]
+			selected_index_list = [kwargv['data'].selected_index_deg1, kwargv['data'].selected_index_deg2,kwargv['data'].selected_index_deg3,kwargv['data'].selected_index_deg4]
 			save_score = kwargv['save_score']
 
 		else:
@@ -528,18 +523,14 @@ class BaseKernelSetConv(Module):
 			edge_index = kwargv['edge_index']
 			edge_attr = kwargv['edge_attr']
 			p = kwargv['p']
-			focal_index_deg1 = kwargv['focal_index_deg1']
-			focal_index_deg2 = kwargv['focal_index_deg2']
-			focal_index_deg3 = kwargv['focal_index_deg3']
-			focal_index_deg4 = kwargv['focal_index_deg4']
-			nei_index_deg1 = kwargv['nei_index_deg1']
-			nei_index_deg2 = kwargv['nei_index_deg2']
-			nei_index_deg3 = kwargv['nei_index_deg3']
-			nei_index_deg4 = kwargv['nei_index_deg4']
-			nei_edge_attr_deg1 = kwargv['nei_edge_attr_deg1']
-			nei_edge_attr_deg2 = kwargv['nei_edge_attr_deg2']
-			nei_edge_attr_deg3 = kwargv['nei_edge_attr_deg3']
-			nei_edge_attr_deg4 = kwargv['nei_edge_attr_deg4']
+
+			x_focal_list = [kwargv['x_focal_deg1'], kwargv['x_focal_deg2'], kwargv['x_focal_deg3'], kwargv['x_focal_deg4']]
+			p_focal_list = [kwargv['p_focal_deg1'], kwargv['p_focal_deg2'], kwargv['p_focal_deg3'], kwargv['p_focal_deg4']]
+			nei_x_list = [kwargv['nei_x_deg1'],kwargv['nei_x_deg2'],kwargv['nei_x_deg3'],kwargv['nei_x_deg4']]
+			nei_p_list = [kwargv['nei_p_deg1'],kwargv['nei_p_deg2'],kwargv['nei_p_deg3'],kwargv['nei_p_deg4']]
+			nei_edge_attr_list = [kwargv['nei_edge_attr_deg1'], kwargv['nei_edge_attr_deg2'], kwargv['nei_edge_attr_deg3'], kwargv['nei_edge_attr_deg4']]
+			selected_index_list = [kwargv['selected_index_deg1'],kwargv['selected_index_deg2'],kwargv['selected_index_deg3'],kwargv['selected_index_deg4']]
+
 			save_score = kwargv['save_score']
 #         print('edge_index')
 #         print(edge_index)
@@ -559,19 +550,29 @@ class BaseKernelSetConv(Module):
 		start_col_id = 0
 		for deg in range(1, 5):
 			print(f'deg:{deg}')
-			receptive_field = self.convert_graph_to_receptive_field(
-				deg, x, p, edge_index, edge_attr, 
-				focal_index_deg1, focal_index_deg2, focal_index_deg3, focal_index_deg4,
-				nei_index_deg1, nei_index_deg2, nei_index_deg3, nei_index_deg4,
-				nei_edge_attr_deg1, nei_edge_attr_deg2, nei_edge_attr_deg3, nei_edge_attr_deg4
-				)
-#             print('receptive_field')
-#             print(receptive_field)
-			if receptive_field is not None:
-				x_focal, p_focal, x_neighbor, p_neighbor, edge_attr_neighbor, selected_index = receptive_field[
-					0], receptive_field[1], receptive_field[2], receptive_field[3], receptive_field[4], receptive_field[5]
-				data = Data(x_focal=x_focal, p_focal=p_focal, x_neighbor=x_neighbor,
-							p_neighbor=p_neighbor, edge_attr_neighbor=edge_attr_neighbor)
+
+			x_focal = x_focal_list[deg-1]
+			p_focal = p_focal_list[deg-1]
+			x_neighbor = nei_x_list[deg-1]
+			p_neighbor = nei_p_list[deg-1]
+			edge_attr_neighbor =nei_edge_attr_list[deg-1] 
+			selected_index = selected_index_list[deg-1]
+
+			if x_focal.shape[0] !=0: # make sure there are some nodes having a certain degree
+				data = Data(x_focal=x_focal, p_focal=p_focal, x_neighbor=x_neighbor, p_neighbor=p_neighbor, edge_attr_neighbor=edge_attr_neighbor)
+# 			receptive_field = self.convert_graph_to_receptive_field(
+# 				deg, x, p, edge_index, edge_attr, 
+# 				focal_index_deg1, focal_index_deg2, focal_index_deg3, focal_index_deg4,
+# 				nei_index_deg1, nei_index_deg2, nei_index_deg3, nei_index_deg4,
+# 				nei_edge_attr_deg1, nei_edge_attr_deg2, nei_edge_attr_deg3, nei_edge_attr_deg4
+# 				)
+# #             print('receptive_field')
+# #             print(receptive_field)
+# 			if receptive_field is not None:
+# 				x_focal, p_focal, x_neighbor, p_neighbor, edge_attr_neighbor, selected_index = receptive_field[
+# 					0], receptive_field[1], receptive_field[2], receptive_field[3], receptive_field[4], receptive_field[5]
+# 				data = Data(x_focal=x_focal, p_focal=p_focal, x_neighbor=x_neighbor,
+# 							p_neighbor=p_neighbor, edge_attr_neighbor=edge_attr_neighbor)
 
 #                 print(f'selected_index:{selected_index.shape}')
 #                 print('====data info====')

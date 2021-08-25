@@ -28,7 +28,7 @@ from clearml import Task
 from model import GNN_graphpred
 from evaluation import enrichment, roc_auc, ppv
 from util import print_model_size
-from loader import ToIndexAndEdgeAttrForDeg
+from loader import ToXAndPAndEdgeAttrForDeg
 
 time_stamp = datetime.now().strftime("%b-%d-%Y_%Hh%Mm%Ss")
 
@@ -50,12 +50,13 @@ def train(args, model, device, loader, optimizer):
             print(f'smi:{smi}')
         print(f'batch:{batch.batch}')
 
-        pred, h = model(batch.x, batch.p, batch.edge_index,
-                        batch.edge_attr, batch.batch,
-                        batch.focal_index_deg1, batch.focal_index_deg2, batch.focal_index_deg3, batch.focal_index_deg4,
-                        batch.nei_index_deg1, batch.nei_index_deg2, batch.nei_index_deg3, batch.nei_index_deg4,
-                        batch.nei_edge_attr_deg1, batch.nei_edge_attr_deg2, batch.nei_edge_attr_deg3, batch.nei_edge_attr_deg4
-
+        pred, h = model(batch.x, batch.p, batch.edge_index, batch.edge_attr, batch.batch,
+                        batch.x_focal_deg1, batch.x_focal_deg2, batch.x_focal_deg3, batch.x_focal_deg4,
+                        batch.p_focal_deg1, batch.p_focal_deg2, batch.p_focal_deg3, batch.p_focal_deg4,
+                        batch.nei_x_deg1, batch.nei_x_deg2, batch.nei_x_deg3, batch.nei_x_deg4,
+                        batch.nei_p_deg1, batch.nei_p_deg2, batch.nei_p_deg3, batch.nei_p_deg4,
+                        batch.nei_edge_attr_deg1, batch.nei_edge_attr_deg2, batch.nei_edge_attr_deg3, batch.nei_edge_attr_deg4,
+                        batch.selected_index_deg1, batch.selected_index_deg2, batch.selected_index_deg3, batch.selected_index_deg4
                         )
         y = batch.y.view(pred.shape).to(torch.float64)
 
@@ -216,7 +217,7 @@ def main():
 
     print(f'woring on {args.D}D now...')
 
-    dataset = MoleculeDataset(D=args.D, root=root, dataset=dataset, pre_transform=ToIndexAndEdgeAttrForDeg())
+    dataset = MoleculeDataset(D=args.D, root=root, dataset=dataset, pre_transform=ToXAndPAndEdgeAttrForDeg())
     print(f'dataset[0]:{dataset[0]}')
     if args.num_samples != -1:
         index = list(range(args.num_samples))

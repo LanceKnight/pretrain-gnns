@@ -58,40 +58,76 @@ class MolGCN(MessagePassing):
             edge_index = kwargv['data'].edge_index
             edge_attr = kwargv['data'].edge_attr
             p = kwargv['data'].p
-            focal_index_deg1 = kwargv['data'].focal_index_deg1
-            focal_index_deg2 = kwargv['data'].focal_index_deg2
-            focal_index_deg3 = kwargv['data'].focal_index_deg3
-            focal_index_deg4 = kwargv['data'].focal_index_deg4
-            nei_index_deg1 = kwargv['data'].nei_index_deg1
-            nei_index_deg2 = kwargv['data'].nei_index_deg2
-            nei_index_deg3 = kwargv['data'].nei_index_deg3
-            nei_index_deg4 = kwargv['data'].nei_index_deg4
+            x_focal_deg1 = kwargv['data'].x_focal_deg1
+            p_focal_deg1 = kwargv['data'].p_focal_deg1
+            nei_x_deg1 = kwargv['data'].nei_x_deg1
+            nei_p_deg1 = kwargv['data'].nei_p_deg1
             nei_edge_attr_deg1 = kwargv['data'].nei_edge_attr_deg1
+            selected_index_deg1 = kwargv['data'].selected_index_deg1
+
+            x_focal_deg2 = kwargv['data'].x_focal_deg2
+            p_focal_deg2 = kwargv['data'].p_focal_deg2
+            nei_x_deg2 = kwargv['data'].nei_x_deg2
+            nei_p_deg2 = kwargv['data'].nei_p_deg2
             nei_edge_attr_deg2 = kwargv['data'].nei_edge_attr_deg2
+            selected_index_deg2 = kwargv['data'].selected_index_deg2
+
+            x_focal_deg3 = kwargv['data'].x_focal_deg3
+            p_focal_deg3 = kwargv['data'].p_focal_deg3
+            nei_x_deg3 = kwargv['data'].nei_x_deg3
+            nei_p_deg3 = kwargv['data'].nei_p_deg3
             nei_edge_attr_deg3 = kwargv['data'].nei_edge_attr_deg3
+            selected_index_deg3 = kwargv['data'].selected_index_deg3
+
+            x_focal_deg4 = kwargv['data'].x_focal_deg4
+            p_focal_deg4 = kwargv['data'].p_focal_deg4
+            nei_x_deg4 = kwargv['data'].nei_x_deg4
+            nei_p_deg4 = kwargv['data'].nei_p_deg4
             nei_edge_attr_deg4 = kwargv['data'].nei_edge_attr_deg4
+            selected_index_deg4 = kwargv['data'].selected_index_deg4
+
             save_score = kwargv['save_score']
         else:
             x = kwargv['x']
             edge_index = kwargv['edge_index']
             edge_attr = kwargv['edge_attr']
             p = kwargv['p']
-            focal_index_deg1 = kwargv['focal_index_deg1']
-            focal_index_deg2 = kwargv['focal_index_deg2']
-            focal_index_deg3 = kwargv['focal_index_deg3']
-            focal_index_deg4 = kwargv['focal_index_deg4']
-            nei_index_deg1 = kwargv['nei_index_deg1']
-            nei_index_deg2 = kwargv['nei_index_deg2']
-            nei_index_deg3 = kwargv['nei_index_deg3']
-            nei_index_deg4 = kwargv['nei_index_deg4']
+
+            x_focal_deg1 = kwargv['x_focal_deg1']
+            p_focal_deg1 = kwargv['p_focal_deg1']
+            nei_x_deg1 = kwargv['nei_x_deg1']
+            nei_p_deg1 = kwargv['nei_p_deg1']
             nei_edge_attr_deg1 = kwargv['nei_edge_attr_deg1']
+            selected_index_deg1 = kwargv['selected_index_deg1']
+
+            x_focal_deg2 = kwargv['x_focal_deg2']
+            p_focal_deg2 = kwargv['p_focal_deg2']
+            nei_x_deg2 = kwargv['nei_x_deg2']
+            nei_p_deg2 = kwargv['nei_p_deg2']
             nei_edge_attr_deg2 = kwargv['nei_edge_attr_deg2']
+            selected_index_deg2 = kwargv['selected_index_deg2']
+
+            x_focal_deg3 = kwargv['x_focal_deg3']
+            p_focal_deg3 = kwargv['p_focal_deg3']
+            nei_x_deg3 = kwargv['nei_x_deg3']
+            nei_p_deg3 = kwargv['nei_p_deg3']
             nei_edge_attr_deg3 = kwargv['nei_edge_attr_deg3']
+            selected_index_deg3 = kwargv['selected_index_deg3']
+
+            x_focal_deg4 = kwargv['x_focal_deg4']
+            p_focal_deg4 = kwargv['p_focal_deg4']
+            nei_x_deg4 = kwargv['nei_x_deg4']
+            nei_p_deg4 = kwargv['nei_p_deg4']
             nei_edge_attr_deg4 = kwargv['nei_edge_attr_deg4']
+            selected_index_deg4 = kwargv['selected_index_deg4']
+
             data = Data(x=x, p=p, edge_index=edge_index, edge_attr=edge_attr,
-                        focal_index_deg1=focal_index_deg1, focal_index_deg2=focal_index_deg2, focal_index_deg3=focal_index_deg3, focal_index_deg4=focal_index_deg4,
-                        nei_index_deg1=nei_index_deg1, nei_index_deg2=nei_index_deg2, nei_index_deg3=nei_index_deg3, nei_index_deg4=nei_index_deg4,
-                        nei_edge_attr_deg1=nei_edge_attr_deg1, nei_edge_attr_deg2=nei_edge_attr_deg2, nei_edge_attr_deg3=nei_edge_attr_deg3, nei_edge_attr_deg4=nei_edge_attr_deg4
+                        x_focal_deg1=x_focal_deg1, x_focal_deg2=x_focal_deg2, x_focal_deg3=x_focal_deg3, x_focal_deg4=x_focal_deg4,
+                        p_focal_deg1=p_focal_deg1, p_focal_deg2=p_focal_deg2, p_focal_deg3=p_focal_deg3, p_focal_deg4=p_focal_deg4,
+                        nei_x_deg1=nei_x_deg1, nei_x_deg2=nei_x_deg2, nei_x_deg3=nei_x_deg3, nei_x_deg4=nei_x_deg4,
+                        nei_p_deg1=nei_p_deg1, nei_p_deg2=nei_p_deg2, nei_p_deg3=nei_p_deg3, nei_p_deg4=nei_p_deg4,
+                        nei_edge_attr_deg1=nei_edge_attr_deg1, nei_edge_attr_deg2=nei_edge_attr_deg2, nei_edge_attr_deg3=nei_edge_attr_deg3, nei_edge_attr_deg4=nei_edge_attr_deg4,
+                        selected_index_deg1=selected_index_deg1, selected_index_deg2=selected_index_deg2, selected_index_deg3=selected_index_deg3, selected_index_deg4=selected_index_deg4
                         )
             # print(f'foward: data.x{data.x}')
             save_score = kwargv['save_score']
@@ -119,13 +155,13 @@ class GNN_graphpred(torch.nn.Module):
     """
     Extension of GIN to incorporate edge information by concatenation.
     Args:
-        num_layer (int): the number of GNN layers
-        emb_dim (int): dimensionality of embeddings
-        num_tasks (int): number of tasks in multi-task learning scenario
-        drop_ratio (float): dropout rate
-        JK (str): last, concat, max or sum.
-        graph_pooling (str): sum, mean, max, attention, set2set
-        gnn_type: gin, gcn, graphsage, gat
+            num_layer (int): the number of GNN layers
+            emb_dim (int): dimensionality of embeddings
+            num_tasks (int): number of tasks in multi-task learning scenario
+            drop_ratio (float): dropout rate
+            JK (str): last, concat, max or sum.
+            graph_pooling (str): sum, mean, max, attention, set2set
+            gnn_type: gin, gcn, graphsage, gat
     See https://arxiv.org/abs/1810.00826
     JK-net: https://arxiv.org/abs/1806.03536
     """
@@ -191,35 +227,49 @@ class GNN_graphpred(torch.nn.Module):
             torch.save(layer.state_dict(), f'{path}/{time_stamp}_{i}th_layer.pth')
 
     def forward(self, *argv, save_score=False):
-        if len(argv) == 17:
+        if len(argv) == 29:
             x, p, edge_index, edge_attr, batch, \
-                focal_index_deg1, focal_index_deg2, focal_index_deg3, focal_index_deg4,\
-                nei_index_deg1, nei_index_deg2, nei_index_deg3, nei_index_deg4,\
-                nei_edge_attr_deg1, nei_edge_attr_deg2, nei_edge_attr_deg3, nei_edge_attr_deg4\
+                x_focal_deg1, x_focal_deg2, x_focal_deg3, x_focal_deg4,\
+                p_focal_deg1, p_focal_deg2, p_focal_deg3, p_focal_deg4,\
+                nei_x_deg1, nei_x_deg2, nei_x_deg3, nei_x_deg4,\
+                nei_p_deg1, nei_p_deg2, nei_p_deg3, nei_p_deg4,\
+                nei_edge_attr_deg1, nei_edge_attr_deg2, nei_edge_attr_deg3, nei_edge_attr_deg4,\
+                selected_index_deg1, selected_index_deg2, selected_index_deg3, selected_index_deg4\
                 =\
                 argv[0], argv[1], argv[2], argv[3], argv[4],\
                 argv[5], argv[6], argv[7], argv[8], \
                 argv[9], argv[10], argv[11], argv[12], \
-                argv[13], argv[14], argv[15], argv[16]
+                argv[13], argv[14], argv[15], argv[16],\
+                argv[17], argv[18], argv[19], argv[20],\
+                argv[21], argv[22], argv[23], argv[24],\
+                argv[25], argv[26], argv[27], argv[28]
         elif len(argv) == 1:
             data = argv[0]
             x, p, edge_index, edge_attr, batch,\
-                focal_index_deg1, focal_index_deg2, focal_index_deg3, focal_index_deg4,\
-                nei_index_deg1, nei_index_deg2, nei_index_deg3, nei_index_deg4,\
-                nei_edge_attr_deg1, nei_edge_attr_deg2, nei_edge_attr_deg3, nei_edge_attr_deg4\
-                = \
+                x_focal_deg1, x_focal_deg2, x_focal_deg3, x_focal_deg4,\
+                p_focal_deg1, p_focal_deg2, p_focal_deg3, p_focal_deg4,\
+                nei_x_deg1, nei_x_deg2, nei_x_deg3, nei_x_deg4,\
+                nei_p_deg1, nei_p_deg2, nei_p_deg3, nei_p_deg4,\
+                nei_edge_attr_deg1, nei_edge_attr_deg2, nei_edge_attr_deg3, nei_edge_attr_deg4,\
+                selected_index_deg1, selected_index_deg2, selected_index_deg3, selected_index_deg4\
+                =\
                 data.x, data.p, data.edge_index, data.edge_attr, data.batch,\
-                data.focal_index_deg1, data.focal_index_deg2, data.focal_index_deg3, data.focal_index_deg4,\
-                data.nei_index_deg1, data.nei_index_deg2, data.nei_index_deg3, data.nei_index_deg4,\
-                data.nei_edge_attr_deg1, data.nei_edge_attr_deg2, data.nei_edge_attr_deg3, data.nei_edge_attr_deg4
+                data.x_focal_deg1, data.x_focal_deg2, data.x_focal_deg3, data.x_focal_deg4,\
+                data.p_focal_deg1, data.p_focal_deg2, data.p_focal_deg3, data.p_focal_deg4,\
+                data.nei_x_deg1, data.nei_x_deg2, data.nei_x_deg3, data.nei_x_deg4,\
+                data.nei_p_deg1, data.nei_p_deg2, data.nei_p_deg3, data.nei_p_deg4,\
+                data.nei_edge_attr_deg1, data.nei_edge_attr_deg2, data.nei_edge_attr_deg3, data.nei_edge_attr_deg4,\
+                data.selected_index_deg1, data.selected_index_deg2, data.selected_index_deg3, data.selected_index_deg4
         else:
             raise ValueError("unmatched number of arguments.")
 
         node_representation = self.gnn(x=x, edge_index=edge_index, edge_attr=edge_attr, p=p,
-                                       focal_index_deg1=focal_index_deg1, focal_index_deg2=focal_index_deg2, focal_index_deg3=focal_index_deg3, focal_index_deg4=focal_index_deg4,
-                                       nei_index_deg1=nei_index_deg1, nei_index_deg2=nei_index_deg2, nei_index_deg3=nei_index_deg3, nei_index_deg4=nei_index_deg4,
+                                       x_focal_deg1=x_focal_deg1, x_focal_deg2=x_focal_deg2, x_focal_deg3=x_focal_deg3, x_focal_deg4=x_focal_deg4,
+                                       p_focal_deg1=p_focal_deg1, p_focal_deg2=p_focal_deg2, p_focal_deg3=p_focal_deg3, p_focal_deg4=p_focal_deg4,
+                                       nei_x_deg1=nei_x_deg1, nei_x_deg2=nei_x_deg2, nei_x_deg3=nei_x_deg3, nei_x_deg4=nei_x_deg4,
+                                       nei_p_deg1=nei_p_deg1, nei_p_deg2=nei_p_deg2, nei_p_deg3=nei_p_deg3, nei_p_deg4=nei_p_deg4,
                                        nei_edge_attr_deg1=nei_edge_attr_deg1, nei_edge_attr_deg2=nei_edge_attr_deg2, nei_edge_attr_deg3=nei_edge_attr_deg3, nei_edge_attr_deg4=nei_edge_attr_deg4,
-
+                                       selected_index_deg1=selected_index_deg1, selected_index_deg2=selected_index_deg2, selected_index_deg3=selected_index_deg3, selected_index_deg4=selected_index_deg4,
                                        save_score=save_score)
         # print(f'node_rep:{node_representation.shape}')
         graph_representation = self.pool(node_representation, batch)

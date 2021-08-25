@@ -4,15 +4,14 @@ import torch
 # import collections
 # import math
 import pandas as pd
-import numpy as np
 # import networkx as nx
 from rdkit import Chem
 # from rdkit.Chem import Descriptors
 from rdkit.Chem import AllChem
 # from rdkit import DataStructs
 from rdkit.Chem.rdMolDescriptors import GetMorganFingerprintAsBitVect
-from torch.utils import data
-from torch_geometric.data import Data, InMemoryDataset
+# from torch.utils import data
+from torch_geometric.data import Data, InMemoryDataset, DataLoader
 from torch_geometric.utils import degree
 # from torch_geometric.data import Batch
 # from itertools import repeat, product, chain
@@ -240,16 +239,15 @@ class MoleculeDataset(InMemoryDataset):
                 smiles_path, sep='\t', header=None)[0]
 
             for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
-            # for i in tqdm(range(1)):
+                # for i in tqdm(range(100)):
                 smi = smiles_list[i]
 
-                data = smiles2graph(2, smi)
+                data = smiles2graph(self.D, smi)
                 if data is None:
                     continue
                 data.id = torch.tensor([i])
                 data.y = torch.tensor([label])
                 data.smiles = smi
-                # print(data)
                 data_list.append(data)
                 data_smiles_list.append(smiles_list[i])
 
@@ -270,100 +268,6 @@ class MoleculeDataset(InMemoryDataset):
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
-# NB: only properly tested when dataset_1 is chembl_with_labels and dataset_2
-# is pcba_pretrain
-
-
-# class SDFBenchmakr2015(InMemoryDataset):
-#     def __init__(self,
-#                  root,
-#                  D=3,
-#                  transform=None,
-#                  pre_transform=None,
-#                  pre_filter=None,
-#                  dataset='435008',
-#                  empty=False):
-
-#         self.dataset = dataset
-#         self.root = root
-#         self.D = D
-#         super(SDFBenchmakr2015, self).__init__(root, transform, pre_transform,
-#                                                pre_filter)
-#         self.transform, self.pre_transform, self.pre_filter = transform, pre_transform, pre_filter
-
-#         if not empty:
-#             self.data, self.slices = torch.load(self.processed_paths[0])
-
-#     @ property
-#     def raw_file_names(self):
-#         file_name_list = os.listdir(self.raw_dir)
-#         # assert len(file_name_list) == 1     # currently assume we have a
-#         # # single raw file
-#         return file_name_list
-
-#     @ property
-#     def processed_file_names(self):
-#         return f'geometric_data_processed-{self.D}D.pt'
-
-#     def download(self):
-#         raise NotImplementedError('Must indicate valid location of raw data. '
-#                                   'No download allowed')
-
-#     def process(self):
-#         data_smiles_list = []
-#         data_list = []
-
-#         if self.dataset == '435008':
-#             for file, label in [(f'{self.dataset}_actives_clean.smi', 1),
-#                                 (f'{self.dataset}_inactives_clean.smi', 0)]:
-#                 smiles_path = os.path.join(self.root, 'raw', file)
-#                 smiles_list = pd.read_csv(smiles_path, sep='\t', header=None)[0]
-
-#                 for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
-#                     smi = smiles_list[i]
-
-#                     data = smiles2graph(2, smi)
-#                     if data is None:
-#                         continue
-#                     data.id = torch.tensor([i])
-#                     data.y = torch.tensor([label])
-#                     data.smiles = smi
-#                     # print(data)
-#                     data_list.append(data)
-#                     data_smiles_list.append(smiles_list[i])
-
-#         else:
-#             raise ValueError('Invalid dataset name')
-
-#         if self.pre_filter is not None:
-#             data_list = [data for data in data_list if self.pre_filter(data)]
-
-#         if self.pre_transform is not None:
-#             data_list = [self.pre_transform(data) for data in data_list]
-
-#         # write data_smiles_list in processed paths
-#         data_smiles_series = pd.Series(data_smiles_list)
-#         data_smiles_series.to_csv(os.path.join(self.processed_dir,
-#                                                'smiles.csv'), index=False,
-#                                   header=False)
-
-#         data, slices = self.collate(data_list)
-#         torch.save((data, slices), self.processed_paths[0])
-
-
-# def create_circular_fingerprint(mol, radius, size, chirality):
-#     """
-
-#     :param mol:
-#     :param radius:
-#     :param size:
-#     :param chirality:
-#     :return: np array of morgan fingerprint
-#     """
-#     fp = GetMorganFingerprintAsBitVect(mol, radius,
-#                                        nBits=size, useChirality=chirality)
-#     return np.array(fp)
-
 
 def smiles_cleaner(smiles):
     '''
@@ -378,7 +282,7 @@ def smiles_cleaner(smiles):
     return new_smiles
 
 
-class ToIndexAndEdgeAttrForDeg(object):
+class ToXAndPAndEdgeAttrForDeg(object):
     '''
     Calculate the focal index and neighbor indices for each degree and store them in focal_index and nei_index.
     Also calculate neighboring edge attr for each degree nei_edge_attr.
@@ -420,74 +324,77 @@ class ToIndexAndEdgeAttrForDeg(object):
 
         return nei_edge_attr
 
-    def __call__(self, data):
+    def convert_grpah_to_receptive_field_for_degN(self, deg, deg_index, data):
         x = data.x
+        p = data.p
         edge_index = data.edge_index
         edge_attr = data.edge_attr
+        selected_index = focal_index = (deg_index == deg).nonzero(as_tuple=True)[0]
+        x_focal = torch.index_select(input=x, dim=0, index=focal_index)
+        p_focal = torch.index_select(input=p, dim=0, index=focal_index)
 
-        deg_index = self.get_degree_index(x, edge_index)
+        num_focal = len(focal_index)
+        nei_x_list_each_node = []
+        nei_p_list_each_node = []
+        nei_edge_attr_list_each_node = []
+        # print(f'num_focal:{num_focal}')
+        for i in range(num_focal):
+            nei_index = self.get_neighbor_index(edge_index, focal_index[i])
+#             print(f'nei_index:{nei_index.shape}')
+
+            nei_x = torch.index_select(x, 0, nei_index)
+#             print(f'nei_x:{nei_x.shape}')
+            nei_p = torch.index_select(p, 0, nei_index)
+#             print(f'nei_p:{nei_p.shape}')
+            nei_edge_attr = self.get_edge_attr_support_from_center_node(edge_attr, edge_index, focal_index[i])
+#             print('\n nei_edge_attr')
+#             print(nei_edge_attr)
+
+            nei_x_list_each_node.append(nei_x)
+            nei_p_list_each_node.append(nei_p)
+            nei_edge_attr_list_each_node.append(nei_edge_attr)
+
+        if num_focal != 0:
+            nei_x = torch.stack(nei_x_list_each_node, dim=0)
+            nei_p = torch.stack(nei_p_list_each_node, dim=0)
+            nei_edge_attr = torch.stack(nei_edge_attr_list_each_node, dim=0)
+        else:
+            nei_x = torch.Tensor()
+            nei_p = torch.Tensor()
+            nei_edge_attr = torch.Tensor()
+
+        return x_focal, p_focal, nei_x, nei_p, nei_edge_attr, selected_index
+
+    def __call__(self, data):
+
+        deg_index = self.get_degree_index(data.x, data.edge_index)
+
+        data.x_focal_deg1 = data.x_focal_deg2 = data.x_focal_deg3 = data.x_focal_deg4 = None
+        data.p_focal_deg1 = data.p_focal_deg2 = data.p_focal_deg3 = data.p_focal_deg4 = None
+        data.nei_x_deg1 = data.nei_x_deg2 = data.nei_x_deg3 = data.nei_x_deg4 = None
+        data.nei_p_deg1 = data.nei_p_deg2 = data.nei_p_deg3 = data.nei_p_deg4 = None
+        data.nei_edge_attr_deg1 = data.nei_edge_attr_deg2 = data.nei_edge_attr_deg3 = data.nei_edge_attr_deg4 = None
+
+        # x_focal_list = [data.x_focal_deg1, data.x_focal_deg2, data.x_focal_deg3, data.x_focal_deg4]
+        # p_focal_list = [data.p_focal_deg1, data.p_focal_deg2, data.p_focal_deg3, data.p_focal_deg4]
+        # nei_x_list = [data.nei_x_deg1, data.nei_x_deg2, data.nei_x_deg3, data.nei_x_deg4]
+        # nei_p_list = [data.nei_p_deg1, data.nei_p_deg2, data.nei_p_deg3, data.nei_p_deg4]
+        # nei_edge_attr_list = [data.nei_edge_attr_deg1, data.nei_edge_attr_deg2, data.nei_edge_attr_deg3, data.nei_edge_attr_deg4]
 
         deg = 1
-        data.focal_index_deg1 = (deg_index == deg).nonzero(as_tuple=True)[0]
-        num_focal = len(data.focal_index_deg1)
-        nei_index_deg1_list = []
-        nei_edge_attr_deg1_list = []
-        for i in range(num_focal):
-            nei_index_deg1_list.append(self.get_neighbor_index(edge_index, data.focal_index_deg1[i]))
-            nei_edge_attr_deg1_list.append(self.get_edge_attr_support_from_center_node(edge_attr, edge_index, data.focal_index_deg1[i]))
-        if len(nei_index_deg1_list) != 0:
-            data.nei_index_deg1 = torch.stack(nei_index_deg1_list, dim=0).T
-            data.nei_edge_attr_deg1 = torch.stack(nei_edge_attr_deg1_list, dim=0)
-        else:
-            data.nei_index_deg1 = torch.Tensor()
-            data.nei_edge_attr_deg1 = torch.Tensor()
+        data.x_focal_deg1, data.p_focal_deg1, data.nei_x_deg1, data.nei_p_deg1, data.nei_edge_attr_deg1, data.selected_index_deg1 = self.convert_grpah_to_receptive_field_for_degN(deg, deg_index, data)
 
         deg = 2
-        data.focal_index_deg2 = (deg_index == deg).nonzero(as_tuple=True)[0]
-        num_focal = len(data.focal_index_deg2)
-        nei_index_deg2_list = []
-        nei_edge_attr_deg2_list = []
-        for i in range(num_focal):
-            nei_index_deg2_list.append(self.get_neighbor_index(edge_index, data.focal_index_deg2[i]))
-            nei_edge_attr_deg2_list.append(self.get_edge_attr_support_from_center_node(edge_attr, edge_index, data.focal_index_deg2[i]))
-        if len(nei_index_deg2_list) != 0:
-            data.nei_index_deg2 = torch.stack(nei_index_deg2_list, dim=0).T
-            data.nei_edge_attr_deg2 = torch.stack(nei_edge_attr_deg2_list, dim=0)
-        else:
-            data.nei_index_deg2 = torch.Tensor()
-            data.nei_edge_attr_deg2 = torch.Tensor()
+        data.x_focal_deg2, data.p_focal_deg2, data.nei_x_deg2, data.nei_p_deg2, data.nei_edge_attr_deg2, data.selected_index_deg2 = self.convert_grpah_to_receptive_field_for_degN(deg, deg_index, data)
 
         deg = 3
-        data.focal_index_deg3 = (deg_index == deg).nonzero(as_tuple=True)[0]
-        num_focal = len(data.focal_index_deg3)
-        nei_index_deg3_list = []
-        nei_edge_attr_deg3_list = []
-        for i in range(num_focal):
-            nei_index_deg3_list.append(self.get_neighbor_index(edge_index, data.focal_index_deg3[i]))
-            nei_edge_attr_deg3_list.append(self.get_edge_attr_support_from_center_node(edge_attr, edge_index, data.focal_index_deg3[i]))
-        if len(nei_index_deg3_list) != 0:
-            data.nei_index_deg3 = torch.stack(nei_index_deg3_list, dim=0).T
-            data.nei_edge_attr_deg3 = torch.stack(nei_edge_attr_deg3_list, dim=0)
-        else:
-            data.nei_index_deg3 = torch.Tensor()
-            data.nei_edge_attr_deg3 = torch.Tensor()
+        data.x_focal_deg3, data.p_focal_deg3, data.nei_x_deg3, data.nei_p_deg3, data.nei_edge_attr_deg3, data.selected_index_deg3 = self.convert_grpah_to_receptive_field_for_degN(deg, deg_index, data)
 
         deg = 4
-        data.focal_index_deg4 = (deg_index == deg).nonzero(as_tuple=True)[0]
-        num_focal = len(data.focal_index_deg4)
-        nei_index_deg4_list = []
-        nei_edge_attr_deg4_list = []
-        for i in range(num_focal):
-            nei_index_deg4_list.append(self.get_neighbor_index(edge_index, data.focal_index_deg4[i]))
-            nei_edge_attr_deg4_list.append(self.get_edge_attr_support_from_center_node(edge_attr, edge_index, data.focal_index_deg4[i]))
-        if len(nei_index_deg4_list) != 0:
-            data.nei_index_deg4 = torch.stack(nei_index_deg4_list, dim=0).T
-            data.nei_edge_attr_deg4 = torch.stack(nei_edge_attr_deg4_list, dim=0)
-        else:
-            data.nei_index_deg4 = torch.Tensor()
-            data.nei_edge_attr_deg4 = torch.Tensor()
+        data.x_focal_deg4, data.p_focal_deg4, data.nei_x_deg4, data.nei_p_deg4, data.nei_edge_attr_deg4, data.selected_index_deg4 = self.convert_grpah_to_receptive_field_for_degN(deg, deg_index, data)
 
         return data
+
 
         # test MoleculeDataset object
 if __name__ == "__main__":
@@ -502,12 +409,43 @@ if __name__ == "__main__":
         dataset = dataset
     else:
         raise Exception('cannot find dataset')
-    dataset = MoleculeDataset(D=2, root=root, dataset=dataset, pre_transform=ToIndexAndEdgeAttrForDeg())
-    print(dataset[0])
-
+    dataset = MoleculeDataset(D=3, root=root, dataset=dataset, pre_transform=ToXAndPAndEdgeAttrForDeg())
+    print('data 1:')
     data = dataset[0]
-    print(data.x)
-    # print(data.p)
-    # print(data.edge_index)
-    # print(data.edge_attr)
-    # create_all_datasets()
+    print(data.selected_index_deg1)
+    # deg = degree(data.edge_index[0], data.x.shape[0]).unsqueeze(-1)
+    # print('p:')
+    # p = torch.cat((data.p, deg), dim=1)
+    # print(p)
+
+    print('\n')
+    print('data 2:')
+    data = dataset[1]
+    print(data.selected_index_deg1)
+    # deg = degree(data.edge_index[0], data.x.shape[0]).unsqueeze(-1)
+    # print('p:\n')
+    # p = torch.cat((data.p, deg), dim=1)
+    # print(p)
+
+    # loader = DataLoader(dataset, batch_size=2)
+    # for batch in loader:
+    #     print(batch.selected_index_deg4)
+    # print('batch.p_focal_deg1\n')
+    # print(batch.p_focal_deg1)
+    # print('batch.nei_p_deg1\n')
+    # print(batch.nei_p_deg1)
+
+    # print('batch.p_focal_deg2\n')
+    # print(batch.p_focal_deg2)
+    # print('batch.nei_p_deg2\n')
+    # print(batch.nei_p_deg2)
+
+    # print('batch.p_focal_deg3\n')
+    # print(batch.p_focal_deg3)
+    # print('batch.nei_p_deg3\n')
+    # print(batch.nei_p_deg3)
+
+    # print('batch.p_focal_deg4\n')
+    # print(batch.p_focal_deg4)
+    # print('batch.nei_p_deg4\n')
+    # print(batch.nei_p_deg4)
