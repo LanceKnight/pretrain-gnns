@@ -11,7 +11,10 @@ from itertools import permutations
 import math
 import pandas as pd
 
+import time
+
 import os
+
 
 from customized_kernels import get_hop1_kernel_list, hop1_degree1_functional_groups, hop1_degree2_functional_groups, hop1_degree3_functional_groups, hop1_degree4_functional_groups, generate_kernel_with_angle_and_length_and_edge_attr
 
@@ -429,7 +432,7 @@ class BaseKernelSetConv(Module):
         return nei_x
 
     def convert_graph_to_receptive_field(self, deg, x, p, edge_index, edge_attr, selected_index, nei_index):
-
+        # start = time.time()
         x_focal = self.get_focal_nodes_of_degree(
             x=x, p=p, selected_index=selected_index)
 
@@ -439,6 +442,8 @@ class BaseKernelSetConv(Module):
             x_neighbor = self.get_neighbor_nodes_and_edges_of_degree(deg=deg, x=x, p=p, nei_index=nei_index)
 #             print(f'x_neighbor:{x_neighbor.shape}')
 #             print(f'p_neighbor:{p_neighbor.shape}')
+            # end = time.time()
+            # print(f'2receptive_field:{end-start}')
             return x_focal, x_neighbor
         return None
 
@@ -479,6 +484,7 @@ class BaseKernelSetConv(Module):
         inputs:
         data: graph data containing feature matrix, adjacency matrix, edge_attr matrix
         '''
+        start = time.time()
         if len(argv) != 0:
             raise Exception(
                 'Kernel does not take positional argument, use keyword argument instead. e.g. model(data=data)')
@@ -610,6 +616,8 @@ class BaseKernelSetConv(Module):
         # print(f'sc:{sc}')
         if(save_score == True):
             self.save_score(sc)  # save scores for analysis
+        end = time.time()
+        print(f'BaseKernelSetConv time:{end -start}')
         return sc
 
 

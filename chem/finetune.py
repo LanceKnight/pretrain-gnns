@@ -29,6 +29,7 @@ from model import GNN_graphpred
 from evaluation import enrichment, roc_auc, ppv
 from util import print_model_size
 from loader import ToXAndPAndEdgeAttrForDeg
+import time
 
 time_stamp = datetime.now().strftime("%b-%d-%Y_%Hh%Mm%Ss")
 
@@ -37,11 +38,12 @@ criterion = nn.BCEWithLogitsLoss(reduction='mean')
 
 
 def train(args, model, device, loader, optimizer):
+
     model.train()
 
     loss_lst = []
     for step, batch in enumerate(tqdm(loader, desc="Iteration")):
-
+        start = time.time()
         batch = batch.to(device)
 
         # for smi in batch.smiles:
@@ -72,9 +74,14 @@ def train(args, model, device, loader, optimizer):
 
         loss_lst.append(loss)
         optimizer.zero_grad()
+        back_start = time.time()
         loss.backward()
+        back_end = time.time()
+        print(f'backprop time{back_end-back_start}')
 
         optimizer.step()
+        end = time.time()
+        print(f'batch time:{end-start}')
     batch_loss = sum(loss_lst) / float(len(loader))
     print(f'loss:{batch_loss}')
     return batch_loss

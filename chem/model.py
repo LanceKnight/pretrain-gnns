@@ -8,6 +8,8 @@ from datetime import datetime
 from kernels import PredefinedKernelSetConv, KernelSetConv
 from loader import MoleculeDataset
 
+import time
+
 
 class MolGCN(MessagePassing):
     def __init__(self, num_layers=5, num_kernel1_1hop=0, num_kernel2_1hop=0, num_kernel3_1hop=0, num_kernel4_1hop=0, num_kernel1_Nhop=0, num_kernel2_Nhop=0, num_kernel3_Nhop=0, num_kernel4_Nhop=0, predefined_kernelsets=True, x_dim=5, p_dim=3, edge_attr_dim=1, ):
@@ -143,7 +145,8 @@ class MolGCN(MessagePassing):
         h = x
 
         for i in range(self.num_layers):
-            # print(f'{i}th layer')
+            print(f'{i}th layer')
+            start = time.time()
             data.x = h
 
             kernel_layer = self.layers[i]
@@ -152,7 +155,8 @@ class MolGCN(MessagePassing):
             # print('sim_sc')
             # print(sim_sc)
             h = self.propagate(edge_index=edge_index, sim_sc=sim_sc)
-            # print(f'h:{h}')
+            end = time.time()
+            print(f'layer time:{end-start}')
         return h
 
     def message(self, sim_sc_j):
