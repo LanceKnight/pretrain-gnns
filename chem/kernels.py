@@ -91,34 +91,22 @@ class KernelConv(Module):
 
     def get_angle_score(self, p_neighbor, p_support):
         #         print('get_angle_score')
-        #         print(f'p_neighbor:{p_neighbor.shape}')
+        # print(f'p_neighbor:{p_neighbor.shape}')
         #         print(p_neighbor.shape)
-        #         print(f'p_support:{p_support.shape}')
+        # print(f'p_support:{p_support.shape}')
         #         print(p_support.shape)
         if(p_support.shape[-2] == 1):
-            return torch.full((p_support.shape[0], p_neighbor.shape[0]), math.pi / 2, device=p_neighbor.device)
-#         cos = CosineSimilarity(dim = 1)
+            return torch.full((p_support.shape[0], 1, p_neighbor.shape[0]), math.pi / 2, device=p_neighbor.device)
 
-        p_neighbor = p_neighbor.unsqueeze(0).unsqueeze(0).expand(
-            p_support.shape[0], p_support.shape[1], p_neighbor.shape[-3], p_neighbor.shape[-2], p_neighbor.shape[-1])
-#         p_neighbor = p_neighbor.unsqueeze(0).expand(p_support.shape)
-#         print(f'p_neighbor:{p_neighbor.shape}')
+        p_neighbor = p_neighbor.unsqueeze(0).unsqueeze(0).expand(p_support.shape[0], p_support.shape[1], p_neighbor.shape[-3], p_neighbor.shape[-2], p_neighbor.shape[-1])
         intra_p_neighbor_angle = self.intra_angle(p_neighbor)
-#         intra_p_neighbor_dist = intra_p_neighbor_dist.unsqueeze(0).expand(p_support.shape[0], p_neighbor.shape[0],p_neighbor.shape[1])
-#         print(f'intra_p_neighbor_dist:{intra_p_neighbor_dist.shape}')
 
-#         p_support = p_support.expand(p_neighbor.shape)
-#         print(f'p_support:{p_support.shape}')
+        p_support = p_support.unsqueeze(2).expand(p_support.shape[0], p_support.shape[1], p_neighbor.shape[-3], p_support.shape[-2], p_support.shape[-1])
         intra_p_support_angle = self.intra_angle(p_support)
-#         intra_p_support_dist = intra_p_support_dist.unsqueeze(1).expand(p_support.shape[0], p_neighbor.shape[0],p_support.shape[1])
-#         print(f'intra_p_support_dist:{intra_p_support_dist.shape}')
 
-#         sc = cos(intra_p_neighbor_dist, intra_p_support_dist)
-#         sc = torch.dot(intra_p_neighbor_dist, intra_p_support_dist.T)
-        sc = self.arctan_sc(intra_p_neighbor_angle,
-                            intra_p_support_angle, dim=(-1))
-#         print(f'inner angle_sc:{sc.shape}')
-        return sc.squeeze(1)
+        sc = self.arctan_sc(intra_p_neighbor_angle, intra_p_support_angle, dim=(-1))
+        # print(f'sc:{sc.shape}')
+        return sc
 
     def get_length_score(self, p_neighbor, p_support):
         len_p_neighbor = torch.norm(p_neighbor, dim=-1)
@@ -178,14 +166,14 @@ class KernelConv(Module):
         sc = self.arctan_sc(edge_attr_nei, edge_attr_support, dim=(-2, -1))
         return sc
 
-    def calculate_total_score(self, x_focal, p_focal, x_neighbor, p_neighbor, edge_attr_neighbor):
+    def calculate_total_score(self, p_focal, p_neighbor):
         # calibrate p_neighbor
         p_neighbor = p_neighbor - p_focal.unsqueeze(1)
 
         # get kernel params
-        x_center = self.x_center
-        x_support = self.x_support
-        edge_attr_support = self.edge_attr_support
+        # x_center = self.x_center
+        # x_support = self.x_support
+        # edge_attr_support = self.edge_attr_support
         p_support = self.p_support
 
         # print('=====cal total sc')
@@ -203,95 +191,63 @@ class KernelConv(Module):
         # because every sub-score is calculated using actan function, which peaks at pi/2, so this max_atn is used to normalized the score so it is in [0,1]
         max_atan = torch.tensor([math.pi / 2], device=p_neighbor.device)
 
-        # calculate the support attribute score
-        permuted_x_support = self.permute(x_support)
-#         print(f'permuted_x_support:{permuted_x_support.shape}')
-        support_attr_sc = self.get_support_attribute_score(x_neighbor, permuted_x_support) / max_atan
-#         print(f'support_attr_sc:{support_attr_sc}')
-        # get the best support_attr_sc and its index
-        best_support_attr_sc, best_support_attr_sc_index = torch.max(support_attr_sc, dim=1)
-#         print(f'best_support_attr_sc:{best_support_attr_sc}, index:{best_support_attr_sc_index.shape}')
-        # print(f'index:{best_support_attr_sc_index}')
-
         # calculate the angle score
         permuted_p_support = self.permute(p_support)
-        permuted_p_support = permuted_p_support.unsqueeze(2).expand(
-            permuted_p_support.shape[0], permuted_p_support.shape[1], best_support_attr_sc_index.shape[1], permuted_p_support.shape[2], permuted_p_support.shape[3])
-#         print(f'permuted_p_support:{permuted_p_support}')
-        selected_index = best_support_attr_sc_index.unsqueeze(1).unsqueeze(-1).unsqueeze(-1).expand(
-            permuted_p_support.shape[0], 1, best_support_attr_sc_index.shape[-1], permuted_p_support.shape[3], permuted_p_support.shape[4])
+        # print(f'p_neighbor:{p_neighbor.shape} permuted_p_support:{permuted_p_support.shape}')
+        angle_sc = self.get_angle_score(p_neighbor, permuted_p_support)
+        best_angle_sc, best_angle_sc_index = torch.max(angle_sc, dim=1)
+        best_angle_sc_index = best_angle_sc_index.unsqueeze(1)
+        best_angle_sc /= max_atan
+        angle_sc = best_angle_sc
+#         print(f'angle_sc:{angle_sc.shape}')
+#         print(angle_sc)
+#         print(f'best_angle_sc:{best_angle_sc.shape}')
+#         print(best_angle_sc.shape)
+#         print('best_angle_sc_index:')
+#         print(best_angle_sc_index.shape)
+
+        # print(f'angle_sc:{angle_sc.shape}')
+
+        # get the length score. Firslty get the p and p_support combination that gives the best angle score
+
+        # print(f'best_angle_sc_index:{best_angle_sc_index.shape} permuted_p_support:{permuted_p_support.shape}')
+        permuted_p_support = permuted_p_support.unsqueeze(2).expand(permuted_p_support.shape[0], permuted_p_support.shape[1],
+                                                                    best_angle_sc_index.shape[2], permuted_p_support.shape[-2], permuted_p_support.shape[-1])
+        selected_index = best_angle_sc_index.unsqueeze(-1).unsqueeze(-1).expand(best_angle_sc_index.shape[0], best_angle_sc_index.shape[1],
+                                                                                best_angle_sc_index.shape[2], permuted_p_support.shape[-2], permuted_p_support.shape[-1])
+        # print(f'selected_index:{selected_index.shape} permuted_p_support:{permuted_p_support.shape}')
         best_p_support = torch.gather(permuted_p_support, 1, selected_index)
-#         print(f'best_p_support:{best_p_support}')
-        angle_sc = self.get_angle_score(p_neighbor, best_p_support) / max_atan
-        # print(f'angle_sc.shape:{angle_sc.shape}')
-
-        # calculate length
-        best_p_support = best_p_support.squeeze(1)
+        # calculate the length score for the best combination
 #         print(f'best_p_support:{best_p_support.shape}')
-        length_sc = self.get_length_score(p_neighbor, best_p_support) / max_atan
-        # print(f'length_sc.shape:{length_sc.shape}')
+        length_sc = self.get_length_score(p_neighbor, best_p_support)
+        length_sc /= max_atan
+        length_sc = length_sc.squeeze(1)
+        # print(f'length_sc:{length_sc.shape}')
 
-        # calculate the center attribute score
-#         print(f'x_center:{x_center.shape}')
-        center_attr_sc = self.get_center_attribute_score(x_focal, x_center) / max_atan
-        # print(f'center_attr_sc.shape:{center_attr_sc.shape}')
+        # sc = (length_sc * self.length_sc_weight +
+        #       angle_sc * self.angle_sc_weight +
+        #       support_attr_sc * self.support_attr_sc_weight +
+        #       center_attr_sc * self.center_attr_sc_weight +
+        #       edge_attr_support_sc * self.edge_attr_support_sc_weight) / 5
 
-        # calculate the edge attribute score
-        selected_index = best_support_attr_sc_index.unsqueeze(-1).unsqueeze(-1).expand(
-            best_support_attr_sc_index.shape[0], best_support_attr_sc_index.shape[1], edge_attr_support.shape[-2], edge_attr_support.shape[-1])
-#         print(f'edge_attr_support:{edge_attr_support.shape}')
-        permuted_edge_attr_support = self.permute(edge_attr_support)
-#         print(f'permuted:{permuted_edge_attr_support.shape}')
-#         print(f'best_angle_sc_index:{best_angle_sc_index.shape}')
-        best_edge_attr_support = torch.gather(
-            permuted_edge_attr_support, 1, selected_index)
-#         print(f'best_edge_attr_support:{selected_index.shape}')
-#         print(f'edge_attr_neighbor:{edge_attr_neighbor.shape}')
-#         print(f'best_edge_attr_support:{best_edge_attr_support.shape}')
-        edge_attr_support_sc = self.get_edge_attribute_score(edge_attr_neighbor, best_edge_attr_support) / max_atan
-        # print(f'edge_attr_support_sc.shape:{edge_attr_support_sc.shape}')
-
-
-#         # convert each score to correct dimension
-#         angle_sc = angle_sc
-#         length_sc = length_sc
-        support_attr_sc = best_support_attr_sc  # .unsqueeze(dim=0)
-#         center_attr_sc = center_attr_sc
-#         edge_attr_support_sc = edge_attr_support_sc
-
-        # the maxium value a arctain function can get
-
-        one = torch.tensor([1], device=p_neighbor.device)
-        sc = (length_sc * self.length_sc_weight +
-              angle_sc * self.angle_sc_weight +
-              support_attr_sc * self.support_attr_sc_weight +
-              center_attr_sc * self.center_attr_sc_weight +
-              edge_attr_support_sc * self.edge_attr_support_sc_weight) / 5
-
-        # sc = torch.atan(1 /
-        #                 (torch.square(length_sc - max_atan) +
-        #                  torch.square(angle_sc - max_atan) +
-        #                  torch.square(support_attr_sc - max_atan) +
-        #                  torch.square(center_attr_sc - max_atan) +
-        #                  torch.square(edge_attr_support_sc - max_atan)
-        #                  )).squeeze(0)
-        # sc = sc / max_atan  # normalize the score to be in [0,1]
-
-        return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, edge_attr_support_sc
+        sc = (angle_sc * self.angle_sc_weight + length_sc * self.length_sc_weight) / 2
+        # print(f'sc:{sc.shape}')
+        # sc = sc.T
+        return sc, angle_sc, length_sc
 
     def forward(self, *argv, **kwargv):
         if len(kwargv) == 1:
-            x_focal = kwargv['data'].x_focal
+            # x_focal = kwargv['data'].x_focal
             p_focal = kwargv['data'].p_focal
-            x_neighbor = kwargv['data'].x_neighbor
+            # x_neighbor = kwargv['data'].x_neighbor
             p_neighbor = kwargv['data'].p_neighbor
-            edge_attr_neighbor = kwargv['data'].edge_attr_neighbor
+            # edge_attr_neighbor = kwargv['data'].edge_attr_neighbor
         else:
-            x_focal = kwargv['x_focal']
+            # x_focal = kwargv['x_focal']
             p_focal = kwargv['p_focal']
-            x_neighbor = kwargv['x_neighbor']
+            # x_neighbor = kwargv['x_neighbor']
             p_neighbor = kwargv['p_neighbor']
-            edge_attr_neighbor = kwargv['edge_attr_neighbor']
+            # edge_attr_neighbor = kwargv['edge_attr_neighbor']
 
         if(p_focal.shape[-1] != self.p_support.shape[-1]):
             raise Exception(f'data coordinates is of {p_focal.shape[-1]}D, but the kernel is {self.p_support.shape[-1]}D')
@@ -299,8 +255,7 @@ class KernelConv(Module):
 
 #         x, x_focal, p, edge_attr, edge_index = self.convert_graph_to_receptive_field(x, p, edge_index, edge_attr)
 
-        sc, length_sc, angle_sc, supp_attr_sc, center_attr_sc, edge_attr_support_sc = self.calculate_total_score(
-            x_focal, p_focal, x_neighbor, p_neighbor, edge_attr_neighbor)
+        sc, angle_sc, length_sc = self.calculate_total_score(p_focal, p_neighbor)
 
         # print('\n')
         # print(f'len sc:{length_sc}')
@@ -536,30 +491,25 @@ class BaseKernelSetConv(Module):
         start_row_id = 0
         start_col_id = 0
         for deg in range(1, 5):
-            # print(f'deg:{deg}')
+            print(f'deg:{deg}')
 
             # x_focal = x_focal_list[deg-1]
             # p_focal = p_focal_list[deg-1]
             # x_neighbor = nei_x_list[deg-1]
             # p_neighbor = nei_p_list[deg-1]
-            edge_attr_neighbor = nei_edge_attr_list[deg - 1]
+            # edge_attr_neighbor = nei_edge_attr_list[deg - 1]
             selected_index = selected_index_list[deg - 1]
             p_focal = p_focal_list[deg - 1]
-            nei_index = nei_index_list[deg - 1]
+            # nei_index = nei_index_list[deg - 1]
             p_neighbor = nei_p_list[deg - 1]
 
             # if x_focal.shape[0] !=0: # make sure there are some nodes having a certain degree
             # 	data = Data(x_focal=x_focal, p_focal=p_focal, x_neighbor=x_neighbor, p_neighbor=p_neighbor, edge_attr_neighbor=edge_attr_neighbor)
-            receptive_field = self.convert_graph_to_receptive_field(
-                deg, x, p, edge_index, edge_attr,
-                selected_index, nei_index
-            )
+
 # #             print('receptive_field')
 # #             print(receptive_field)
-            if receptive_field is not None:
-                x_focal, x_neighbor = receptive_field[0], receptive_field[1]
-                data = Data(x_focal=x_focal, p_focal=p_focal, x_neighbor=x_neighbor,
-                            p_neighbor=p_neighbor, edge_attr_neighbor=edge_attr_neighbor)
+            if len(p_focal) != 0:
+                data = Data(p_focal=p_focal, p_neighbor=p_neighbor)
 
                 # print(f'selected_index:{selected_index.shape}')
                 # print('====data info====')
@@ -576,16 +526,18 @@ class BaseKernelSetConv(Module):
                 kernelconv_start = time.time()
                 # print('===fixed_degree_sc===')
                 if self.fixed_kernelconv_set[deg - 1] is not None:
+                    # print(f'fixed kernelconv')
                     fixed_degree_sc = self.fixed_kernelconv_set[deg - 1](data=data)
                     if self.trainable_kernelconv_set[deg - 1] is not None:
-                        # print('---trainable_degree_sc---')
+                        # print(f'trainable kernelconv')
                         trainable_degree_sc = self.trainable_kernelconv_set[deg - 1](data=data)
-                        # print(f'trianable_degree_sc {trainable_degree_sc.shape}')
+                        # print(f'fixed_degree_sc:{fixed_degree_sc.shape} trianable_degree_sc {trainable_degree_sc.shape}')
                         degree_sc = torch.cat([fixed_degree_sc, trainable_degree_sc])
                     else:
+                        # print(f'fixed kernelconv')
                         degree_sc = fixed_degree_sc
                 else:
-
+                    # print(f'trainable kernelconv')
                     if self.trainable_kernelconv_set[deg - 1] is not None:
                         # print('---trainable_degree_sc---')
                         trainable_degree_sc = self.trainable_kernelconv_set[deg - 1](data=data)
@@ -596,11 +548,11 @@ class BaseKernelSetConv(Module):
                         raise Exception(f'both fixed and trainable kernelconv_set are None for degree {deg}')
                 kernelconv_end = time.time()
                 print(f'KernelConv time:{kernelconv_end-kernelconv_start}')
-                zeros[start_row_id:start_row_id + self.num_kernel_list[deg - 1], start_col_id:start_col_id + x_focal.shape[0]] = degree_sc
+                zeros[start_row_id:start_row_id + self.num_kernel_list[deg - 1], start_col_id:start_col_id + p_focal.shape[0]] = degree_sc
 
                 index_list.append(selected_index)
                 start_row_id += self.num_kernel_list[deg - 1]
-                start_col_id += x_focal.shape[0]
+                start_col_id += p_focal.shape[0]
             else:
 
                 start_row_id += self.num_kernel_list[deg - 1]
@@ -615,7 +567,7 @@ class BaseKernelSetConv(Module):
         sc = sc.T
 
         # print(f'sc:{sc}')
-        if(save_score == True):
+        if(save_score is True):
             self.save_score(sc)  # save scores for analysis
         end = time.time()
         print(f'BaseKernelSetConv time:{end -start}')

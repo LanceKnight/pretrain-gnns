@@ -46,6 +46,7 @@ def train(args, model, device, loader, optimizer):
         start = time.time()
         batch = batch.to(device)
 
+        # print(f'smiles:{batch.smiles}')
         # for smi in batch.smiles:
         #     print(f'smi:{smi}')
         # print(f'nei_x_deg1:{batch.nei_x_deg1.shape}')
@@ -79,7 +80,11 @@ def train(args, model, device, loader, optimizer):
         back_end = time.time()
         print(f'backprop time{back_end-back_start}')
 
+        update_start = time.time()
         optimizer.step()
+        update_end = time.time()
+        print(f'update param time:{update_end-update_start}')
+
         end = time.time()
         print(f'batch time:{end-start}')
     batch_loss = sum(loss_lst) / float(len(loader))
@@ -95,7 +100,6 @@ def eval(args, model, device, loader):
 
     for step, batch in enumerate(tqdm(loader, desc="Iteration")):
         batch = batch.to(device)
-
         with torch.no_grad():
             pred, h = model(batch.x, batch.p, batch.edge_index, batch.edge_attr, batch.batch,
                             batch.x_focal_deg1, batch.x_focal_deg2, batch.x_focal_deg3, batch.x_focal_deg4,
@@ -292,9 +296,9 @@ def main():
     # ==========set up model==========
     model = GNN_graphpred(num_layers=args.num_layers, num_kernel1_1hop=args.num_kernel1_1hop, num_kernel2_1hop=args.num_kernel2_1hop, num_kernel3_1hop=args.num_kernel3_1hop, num_kernel4_1hop=args.num_kernel4_1hop, num_kernel1_Nhop=args.num_kernel1_Nhop, num_kernel2_Nhop=args.num_kernel2_Nhop, num_kernel3_Nhop=args.num_kernel3_Nhop, num_kernel4_Nhop=args.num_kernel4_Nhop, x_dim=5, p_dim=args.D,
                           edge_attr_dim=1, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling, predefined_kernelsets=args.predefined_kernelsets)
-    if torch.cuda.device_count() > 1:
-        print("Let's use", torch.cuda.device_count(), "GPUs!")
-        model = nn.DataParallel(model)
+    # if torch.cuda.device_count() > 1:
+    #     print("Let's use", torch.cuda.device_count(), "GPUs!")
+    #     model = nn.DataParallel(model)
 
     # # check model size
     # print_model_size(model)
@@ -310,18 +314,18 @@ def main():
 
     # print(optimizer)
 
-    if torch.cuda.device_count() > 1:
-        model_param_group.append({"params": model.module.gnn.parameters()})
-        if args.graph_pooling == "attention":
-            model_param_group.append({"params": model.module.pool.parameters(), "lr": args.lr * args.lr_scale})
-        model_param_group.append({"params": model.module.graph_pred_linear.parameters(), "lr": args.lr * args.lr_scale})
-        optimizer = optim.Adam(model_param_group, lr=args.lr, weight_decay=args.decay)
-    else:
-        model_param_group.append({"params": model.gnn.parameters()})
-        if args.graph_pooling == "attention":
-            model_param_group.append({"params": model.pool.parameters(), "lr": args.lr * args.lr_scale})
-        model_param_group.append({"params": model.graph_pred_linear.parameters(), "lr": args.lr * args.lr_scale})
-        optimizer = optim.Adam(model_param_group, lr=args.lr, weight_decay=args.decay)
+    # if torch.cuda.device_count() > 1:
+    #     model_param_group.append({"params": model.module.gnn.parameters()})
+    #     if args.graph_pooling == "attention":
+    #         model_param_group.append({"params": model.module.pool.parameters(), "lr": args.lr * args.lr_scale})
+    #     model_param_group.append({"params": model.module.graph_pred_linear.parameters(), "lr": args.lr * args.lr_scale})
+    #     optimizer = optim.Adam(model_param_group, lr=args.lr, weight_decay=args.decay)
+    # else:
+    model_param_group.append({"params": model.gnn.parameters()})
+    if args.graph_pooling == "attention":
+        model_param_group.append({"params": model.pool.parameters(), "lr": args.lr * args.lr_scale})
+    model_param_group.append({"params": model.graph_pred_linear.parameters(), "lr": args.lr * args.lr_scale})
+    optimizer = optim.Adam(model_param_group, lr=args.lr, weight_decay=args.decay)
 
     train_acc_list = []
     val_acc_list = []
