@@ -239,7 +239,7 @@ class MoleculeDataset(InMemoryDataset):
                 smiles_path, sep='\t', header=None)[0]
 
             for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
-                # for i in tqdm(range(100)):
+                # for i in tqdm(range(1)):
                 smi = smiles_list[i]
 
                 data = smiles2graph(self.D, smi)
@@ -263,8 +263,8 @@ class MoleculeDataset(InMemoryDataset):
         data_smiles_series.to_csv(os.path.join(
             self.processed_dir, f'{self.dataset}-smiles.csv'), index=False, header=False)
 
-        for data in data_list:
-            print(data)
+        # for data in data_list:
+        #     print(data)
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
@@ -334,13 +334,14 @@ class ToXAndPAndEdgeAttrForDeg(object):
         p_focal = torch.index_select(input=p, dim=0, index=focal_index)
 
         num_focal = len(focal_index)
+        nei_index_list_each_node = []
         nei_x_list_each_node = []
         nei_p_list_each_node = []
         nei_edge_attr_list_each_node = []
-        # print(f'num_focal:{num_focal}')
+
         for i in range(num_focal):
             nei_index = self.get_neighbor_index(edge_index, focal_index[i])
-#             print(f'nei_index:{nei_index.shape}')
+            nei_index_list_each_node.append(nei_index)
 
             nei_x = torch.index_select(x, 0, nei_index)
 #             print(f'nei_x:{nei_x.shape}')
@@ -355,15 +356,19 @@ class ToXAndPAndEdgeAttrForDeg(object):
             nei_edge_attr_list_each_node.append(nei_edge_attr)
 
         if num_focal != 0:
+            nei_index = torch.stack(nei_index_list_each_node, dim=0).reshape(-1)
             nei_x = torch.stack(nei_x_list_each_node, dim=0)
             nei_p = torch.stack(nei_p_list_each_node, dim=0)
             nei_edge_attr = torch.stack(nei_edge_attr_list_each_node, dim=0)
         else:
+            nei_index = torch.Tensor()
             nei_x = torch.Tensor()
             nei_p = torch.Tensor()
             nei_edge_attr = torch.Tensor()
 
-        return x_focal, p_focal, nei_x, nei_p, nei_edge_attr, selected_index
+        nei_index = nei_index.to(torch.long)
+
+        return x_focal, p_focal, nei_x, nei_p, nei_edge_attr, selected_index, nei_index
 
     def __call__(self, data):
 
@@ -382,19 +387,22 @@ class ToXAndPAndEdgeAttrForDeg(object):
         # nei_edge_attr_list = [data.nei_edge_attr_deg1, data.nei_edge_attr_deg2, data.nei_edge_attr_deg3, data.nei_edge_attr_deg4]
 
         deg = 1
-        data.x_focal_deg1, data.p_focal_deg1, data.nei_x_deg1, data.nei_p_deg1, data.nei_edge_attr_deg1, data.selected_index_deg1 = self.convert_grpah_to_receptive_field_for_degN(deg, deg_index, data)
+        data.x_focal_deg1, data.p_focal_deg1, data.nei_x_deg1, data.nei_p_deg1, data.nei_edge_attr_deg1, data.selected_index_deg1, data.nei_index_deg1 = self.convert_grpah_to_receptive_field_for_degN(
+            deg, deg_index, data)
 
         deg = 2
-        data.x_focal_deg2, data.p_focal_deg2, data.nei_x_deg2, data.nei_p_deg2, data.nei_edge_attr_deg2, data.selected_index_deg2 = self.convert_grpah_to_receptive_field_for_degN(deg, deg_index, data)
+        data.x_focal_deg2, data.p_focal_deg2, data.nei_x_deg2, data.nei_p_deg2, data.nei_edge_attr_deg2, data.selected_index_deg2, data.nei_index_deg2 = self.convert_grpah_to_receptive_field_for_degN(
+            deg, deg_index, data)
 
         deg = 3
-        data.x_focal_deg3, data.p_focal_deg3, data.nei_x_deg3, data.nei_p_deg3, data.nei_edge_attr_deg3, data.selected_index_deg3 = self.convert_grpah_to_receptive_field_for_degN(deg, deg_index, data)
+        data.x_focal_deg3, data.p_focal_deg3, data.nei_x_deg3, data.nei_p_deg3, data.nei_edge_attr_deg3, data.selected_index_deg3, data.nei_index_deg3 = self.convert_grpah_to_receptive_field_for_degN(
+            deg, deg_index, data)
 
         deg = 4
-        data.x_focal_deg4, data.p_focal_deg4, data.nei_x_deg4, data.nei_p_deg4, data.nei_edge_attr_deg4, data.selected_index_deg4 = self.convert_grpah_to_receptive_field_for_degN(deg, deg_index, data)
+        data.x_focal_deg4, data.p_focal_deg4, data.nei_x_deg4, data.nei_p_deg4, data.nei_edge_attr_deg4, data.selected_index_deg4, data.nei_index_deg4 = self.convert_grpah_to_receptive_field_for_degN(
+            deg, deg_index, data)
 
         return data
-
 
         # test MoleculeDataset object
 if __name__ == "__main__":
@@ -409,10 +417,12 @@ if __name__ == "__main__":
         dataset = dataset
     else:
         raise Exception('cannot find dataset')
-    dataset = MoleculeDataset(D=3, root=root, dataset=dataset, pre_transform=ToXAndPAndEdgeAttrForDeg())
+    dataset = MoleculeDataset(D=2, root=root, dataset=dataset, pre_transform=ToXAndPAndEdgeAttrForDeg())
     print('data 1:')
     data = dataset[0]
-    print(data.selected_index_deg1)
+    print(data.smiles)
+    # print(data.selected_index_deg2)
+    print(data.nei_index_deg1)
     # deg = degree(data.edge_index[0], data.x.shape[0]).unsqueeze(-1)
     # print('p:')
     # p = torch.cat((data.p, deg), dim=1)
@@ -421,14 +431,16 @@ if __name__ == "__main__":
     print('\n')
     print('data 2:')
     data = dataset[1]
-    print(data.selected_index_deg1)
+    # print(data.selected_index_deg2)
+    print(data.nei_index_deg1)
     # deg = degree(data.edge_index[0], data.x.shape[0]).unsqueeze(-1)
     # print('p:\n')
     # p = torch.cat((data.p, deg), dim=1)
     # print(p)
 
-    # loader = DataLoader(dataset, batch_size=2)
+    loader = DataLoader(dataset, batch_size=2)
     # for batch in loader:
+    #     print(f'batch.nei_index_deg2:{batch.nei_index_deg1}')
     #     print(batch.selected_index_deg4)
     # print('batch.p_focal_deg1\n')
     # print(batch.p_focal_deg1)

@@ -42,13 +42,11 @@ def train(args, model, device, loader, optimizer):
     loss_lst = []
     for step, batch in enumerate(tqdm(loader, desc="Iteration")):
 
-        batch.batch = batch.batch.to(device)
-
         batch = batch.to(device)
 
-        for smi in batch.smiles:
-            print(f'smi:{smi}')
-        print(f'batch:{batch.batch}')
+        # for smi in batch.smiles:
+        #     print(f'smi:{smi}')
+        # print(f'nei_x_deg1:{batch.nei_x_deg1.shape}')
 
         pred, h = model(batch.x, batch.p, batch.edge_index, batch.edge_attr, batch.batch,
                         batch.x_focal_deg1, batch.x_focal_deg2, batch.x_focal_deg3, batch.x_focal_deg4,
@@ -56,7 +54,8 @@ def train(args, model, device, loader, optimizer):
                         batch.nei_x_deg1, batch.nei_x_deg2, batch.nei_x_deg3, batch.nei_x_deg4,
                         batch.nei_p_deg1, batch.nei_p_deg2, batch.nei_p_deg3, batch.nei_p_deg4,
                         batch.nei_edge_attr_deg1, batch.nei_edge_attr_deg2, batch.nei_edge_attr_deg3, batch.nei_edge_attr_deg4,
-                        batch.selected_index_deg1, batch.selected_index_deg2, batch.selected_index_deg3, batch.selected_index_deg4
+                        batch.selected_index_deg1, batch.selected_index_deg2, batch.selected_index_deg3, batch.selected_index_deg4,
+                        batch.nei_index_deg1, batch.nei_index_deg2, batch.nei_index_deg3, batch.nei_index_deg4
                         )
         y = batch.y.view(pred.shape).to(torch.float64)
 
@@ -91,8 +90,14 @@ def eval(args, model, device, loader):
         batch = batch.to(device)
 
         with torch.no_grad():
-            pred, h = model(batch.x, batch.p, batch.edge_index,
-                            batch.edge_attr, batch.batch)
+            pred, h = model(batch.x, batch.p, batch.edge_index, batch.edge_attr, batch.batch,
+                            batch.x_focal_deg1, batch.x_focal_deg2, batch.x_focal_deg3, batch.x_focal_deg4,
+                            batch.p_focal_deg1, batch.p_focal_deg2, batch.p_focal_deg3, batch.p_focal_deg4,
+                            batch.nei_x_deg1, batch.nei_x_deg2, batch.nei_x_deg3, batch.nei_x_deg4,
+                            batch.nei_p_deg1, batch.nei_p_deg2, batch.nei_p_deg3, batch.nei_p_deg4,
+                            batch.nei_edge_attr_deg1, batch.nei_edge_attr_deg2, batch.nei_edge_attr_deg3, batch.nei_edge_attr_deg4,
+                            batch.selected_index_deg1, batch.selected_index_deg2, batch.selected_index_deg3, batch.selected_index_deg4,
+                            batch.nei_index_deg1, batch.nei_index_deg2, batch.nei_index_deg3, batch.nei_index_deg4)
 
         y = batch.y.view(pred.shape).to(torch.float64)
         loss = criterion(pred, y)
@@ -137,7 +142,7 @@ def eval(args, model, device, loader):
 def main():
     # start clearml as the task manager. this is optional.
 
-    task = Task.init(project_name="kernel GNN", task_name="more layers")
+    task = Task.init(project_name="Tests", task_name="fix-slow", tags="slow-test")
     logger = task.get_logger()
 
     # ==========settings==========
