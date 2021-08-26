@@ -432,7 +432,7 @@ class BaseKernelSetConv(Module):
         return nei_x
 
     def convert_graph_to_receptive_field(self, deg, x, p, edge_index, edge_attr, selected_index, nei_index):
-        # start = time.time()
+        start = time.time()
         x_focal = self.get_focal_nodes_of_degree(
             x=x, p=p, selected_index=selected_index)
 
@@ -442,8 +442,8 @@ class BaseKernelSetConv(Module):
             x_neighbor = self.get_neighbor_nodes_and_edges_of_degree(deg=deg, x=x, p=p, nei_index=nei_index)
 #             print(f'x_neighbor:{x_neighbor.shape}')
 #             print(f'p_neighbor:{p_neighbor.shape}')
-            # end = time.time()
-            # print(f'2receptive_field:{end-start}')
+            end = time.time()
+            print(f'2receptive_field:{end-start}')
             return x_focal, x_neighbor
         return None
 
@@ -573,7 +573,7 @@ class BaseKernelSetConv(Module):
                 # print(p_neighbor.shape)
                 # print('edge_attr_neighbor')
                 # print(edge_attr_neighbor.shape)
-
+                kernelconv_start = time.time()
                 # print('===fixed_degree_sc===')
                 if self.fixed_kernelconv_set[deg - 1] is not None:
                     fixed_degree_sc = self.fixed_kernelconv_set[deg - 1](data=data)
@@ -594,7 +594,8 @@ class BaseKernelSetConv(Module):
 
                     else:
                         raise Exception(f'both fixed and trainable kernelconv_set are None for degree {deg}')
-
+                kernelconv_end = time.time()
+                print(f'KernelConv time:{kernelconv_end-kernelconv_start}')
                 zeros[start_row_id:start_row_id + self.num_kernel_list[deg - 1], start_col_id:start_col_id + x_focal.shape[0]] = degree_sc
 
                 index_list.append(selected_index)
