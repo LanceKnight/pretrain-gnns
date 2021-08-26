@@ -306,12 +306,21 @@ def main():
     # ==========set up optimizer==========
     # different learning rate for different part of GNN
     model_param_group = []
-    model_param_group.append({"params": model.gnn.parameters()})
-    if args.graph_pooling == "attention":
-        model_param_group.append({"params": model.pool.parameters(), "lr": args.lr * args.lr_scale})
-    model_param_group.append({"params": model.graph_pred_linear.parameters(), "lr": args.lr * args.lr_scale})
-    optimizer = optim.Adam(model_param_group, lr=args.lr, weight_decay=args.decay)
+
     # print(optimizer)
+
+    if torch.cuda.device_count() > 1:
+        model_param_group.append({"params": model.module.gnn.parameters()})
+        if args.graph_pooling == "attention":
+            model_param_group.append({"params": model.module.pool.parameters(), "lr": args.lr * args.lr_scale})
+        model_param_group.append({"params": model.module.graph_pred_linear.parameters(), "lr": args.lr * args.lr_scale})
+        optimizer = optim.Adam(model_param_group, lr=args.lr, weight_decay=args.decay)
+    else:
+        model_param_group.append({"params": model.gnn.parameters()})
+        if args.graph_pooling == "attention":
+            model_param_group.append({"params": model.pool.parameters(), "lr": args.lr * args.lr_scale})
+        model_param_group.append({"params": model.graph_pred_linear.parameters(), "lr": args.lr * args.lr_scale})
+        optimizer = optim.Adam(model_param_group, lr=args.lr, weight_decay=args.decay)
 
     train_acc_list = []
     val_acc_list = []
