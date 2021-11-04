@@ -1,2 +1,5 @@
 *.pyc
 dataset
+saved_kernellayers
+scores.csv
+.ipynb_checkpoints

@@ -293,32 +293,50 @@ def print_model_size(model):
     num_element = sum([param.nelement() for param in model.parameters()])
 
     trainable_elements = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    fixed_elements = num_element - trainable_elements
 
     mem_params = sum([param.nelement() * param.element_size() for param in model.parameters()])
     mem_bufs = sum([buf.nelement() * buf.element_size() for buf in model.buffers()])
     mem = mem_params + mem_bufs  # in bytes
 
-    print(f'average param element size:{mean_element_size}, total param_elements:{num_element}, trainable_elements:{trainable_elements} ')
+    print(f'average param element size:{mean_element_size}, total param_elements:{num_element}, trainable_elements:{trainable_elements}, fixed_elements:{fixed_elements} ')
     print(f'total model memory consumed:{mem/1024/1024:.4f} MiB')
 
     # print(f'num params:{len(list(model.parameters()))}')
 
     # print param for each layer
     previous_layer_num = -1
-    num_layer_param = 0
-    for name, param in model.state_dict().items():
+    num_trainable_layer_param = 0
+    num_fixed_layer_param = 0
+    for name, param in model.named_parameters():
         name_segments = name.split('.')
+        # for kernelcov layer
         if(len(name_segments) > 2):
             layer_num = name_segments[2]
+            # kernelsetconv_type = name_segments[3]
 
+            # layer summary
             if(layer_num != previous_layer_num):
                 previous_layer_num = layer_num
-                print(f'num_layer_param:{num_layer_param}')
-                num_layer_param = 0
+                if int(layer_num) != 0:
+                    print(f'layer {int(layer_num)-1}: total_num_layer_param:{num_fixed_layer_param + num_trainable_layer_param}, trainable_elements:{num_trainable_layer_param}, fixed_elements:{num_fixed_layer_param}')
+                print(f'===layer {layer_num}===')
+                num_fixed_layer_param = 0
+                num_trainable_layer_param = 0
 
-            num_layer_param += param.nelement()
+            if not param.requires_grad:
+                num_fixed_layer_param += param.nelement()
+                print(f'fixed param name:{name}, shape:{param.shape}, nelement:{param.nelement()}')
+            else:
+                num_trainable_layer_param += param.nelement()
+                print(f'trainable param name:{name}, shape:{param.shape}, nelement:{param.nelement()}')
+        # print(f'layer {int(layer_num)-1}: total_num_layer_param:{num_fixed_layer_param + num_trainable_layer_param}, trainable_elements:{num_trainable_layer_param}, fixed_elements:{num_fixed_layer_param}')
+
+        # for linear prediction layer
+        else:
             print(f'param name:{name}, shape:{param.shape}, nelement:{param.nelement()}')
-    print(f'num_layer_param:{num_layer_param}')
+
+    print(f'layer {layer_num}:total_num_layer_param:{num_fixed_layer_param + num_trainable_layer_param}, trainable_elements:{num_trainable_layer_param}, fixed_elements:{num_fixed_layer_param}')
 
 
 if __name__ == "__main__":
