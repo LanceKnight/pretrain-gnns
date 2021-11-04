@@ -145,7 +145,7 @@ class MolGCN(MessagePassing):
         h = x
 
         for i in range(self.num_layers):
-            print(f'{i}th layer')
+            # print(f'{i}th layer')
             start = time.time()
             data.x = h
 
@@ -156,7 +156,7 @@ class MolGCN(MessagePassing):
             # print(sim_sc)
             h = self.propagate(edge_index=edge_index, sim_sc=sim_sc)
             end = time.time()
-            print(f'layer time:{end-start}')
+            # print(f'layer time:{end-start}')
         return h
 
     def message(self, sim_sc_j):

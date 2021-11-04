@@ -387,7 +387,7 @@ class BaseKernelSetConv(Module):
         return nei_x
 
     def convert_graph_to_receptive_field(self, deg, x, p, edge_index, edge_attr, selected_index, nei_index):
-        start = time.time()
+        # start = time.time()
         x_focal = self.get_focal_nodes_of_degree(
             x=x, p=p, selected_index=selected_index)
 
@@ -397,8 +397,8 @@ class BaseKernelSetConv(Module):
             x_neighbor = self.get_neighbor_nodes_and_edges_of_degree(deg=deg, x=x, p=p, nei_index=nei_index)
 #             print(f'x_neighbor:{x_neighbor.shape}')
 #             print(f'p_neighbor:{p_neighbor.shape}')
-            end = time.time()
-            print(f'2receptive_field:{end-start}')
+#             end = time.time()
+#             print(f'2receptive_field:{end-start}')
             return x_focal, x_neighbor
         return None
 
@@ -439,7 +439,7 @@ class BaseKernelSetConv(Module):
         inputs:
         data: graph data containing feature matrix, adjacency matrix, edge_attr matrix
         '''
-        start = time.time()
+        # start = time.time()
         if len(argv) != 0:
             raise Exception(
                 'Kernel does not take positional argument, use keyword argument instead. e.g. model(data=data)')
@@ -491,7 +491,7 @@ class BaseKernelSetConv(Module):
         start_row_id = 0
         start_col_id = 0
         for deg in range(1, 5):
-            print(f'deg:{deg}')
+            # print(f'deg:{deg}')
 
             # x_focal = x_focal_list[deg-1]
             # p_focal = p_focal_list[deg-1]
@@ -547,7 +547,7 @@ class BaseKernelSetConv(Module):
                     else:
                         raise Exception(f'both fixed and trainable kernelconv_set are None for degree {deg}')
                 kernelconv_end = time.time()
-                print(f'KernelConv time:{kernelconv_end-kernelconv_start}')
+                # print(f'KernelConv time:{kernelconv_end-kernelconv_start}')
                 zeros[start_row_id:start_row_id + self.num_kernel_list[deg - 1], start_col_id:start_col_id + p_focal.shape[0]] = degree_sc
 
                 index_list.append(selected_index)

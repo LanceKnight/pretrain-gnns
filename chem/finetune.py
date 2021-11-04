@@ -26,7 +26,7 @@ from datetime import datetime
 from clearml import Task
 
 from model import GNN_graphpred
-from evaluation import enrichment, roc_auc, ppv, range_auc
+from evaluation import enrichment, roc_auc, ppv, calculate_logAUC
 from util import print_model_size
 from loader import ToXAndPAndEdgeAttrForDeg
 import time
@@ -134,8 +134,8 @@ def eval(args, model, device, loader):
 
     print(f'y_true:{y_true.shape}')
     enrichment_list.append(enrichment(y_true, y_scores))
-    roc_auc_list.append(roc_auc(y_true, y_scores))
-    range_auc_list.append(range_auc(y_true, y_scores, FPR_RANGE))
+    # roc_auc_list.append(roc_auc(y_true, y_scores))
+    range_auc_list.append(calculate_logAUC(y_true, y_scores, FPR_RANGE))
     ppv_list.append(ppv(y_true, y_scores))
 
     # for i in range(y_true.shape[1]):
@@ -149,7 +149,7 @@ def eval(args, model, device, loader):
         print("Some target is missing!")
         print("Missing ratio: %f" % (1 - float(len(enrichment_list)) / y_true.shape[1]))
 
-    return sum(enrichment_list) / len(enrichment_list), sum(roc_auc_list) / len(roc_auc_list), sum(range_auc_list) / len(range_auc_list), sum(ppv_list) / len(ppv_list), batch_loss
+    return sum(enrichment_list) / len(enrichment_list), sum(range_auc_list) / len(range_auc_list), sum(ppv_list) / len(ppv_list), batch_loss
 
 
 def main():
@@ -234,15 +234,16 @@ def main():
     else:
         raise Exception('cannot find dataset')
 
-    print(f'woring on {args.D}D now...')
+    print(f'working on {args.D}D now...')
 
     dataset = MoleculeDataset(D=args.D, root=root, dataset=dataset, pre_transform=ToXAndPAndEdgeAttrForDeg())
     print(f'dataset[0]:{dataset[0]}')
     if args.num_samples != -1:
         index = list(range(args.num_samples))
-        dataset = dataset[index]
+        print(f'index:{index}')
+        dataset = dataset
     else:
-        dataset = datset
+        dataset = dataset
     print(f'dataset:{dataset}')
 
     # ==========splitting datasets==========
@@ -252,7 +253,10 @@ def main():
         train_dataset, valid_dataset, test_dataset = scaffold_split(dataset, smiles_list, null_value=0, frac_train=0.8, frac_valid=0.1, frac_test=0.1)
         print("scaffold")
     elif args.split == "random":
-        train_dataset, valid_dataset, test_dataset = random_split(dataset, null_value=0, frac_train=0.8, frac_valid=0.1, frac_test=0.1, seed=args.seed)
+        train_dataset = dataset[[torch.tensor(x) for x in range(0, 326)] +[torch.tensor(x) for x in range(1000, 10674)]]
+        valid_dataset = dataset[[torch.tensor(x) for x in range(326, 362)] + [torch.tensor(x) for x in range(20000, 29964)]]
+        test_dataset = dataset[[torch.tensor(x) for x in range(326, 362)] + [torch.tensor(x) for x in range(20000, 29964)]]
+        # train_dataset, valid_dataset, test_dataset = random_split(dataset, null_value=0, frac_train=0.8, frac_valid=0.1, frac_test=0.1, seed=args.seed)
         print("random")
     elif args.split == "random_scaffold":
         smiles_list = pd.read_csv(
@@ -356,19 +360,20 @@ def main():
         else:
             print("omit the training accuracy computation")
             train_enr = train_auc = train_range_auc = train_ppv = 0
-        val_enr, val_auc, val_range_auc, val_ppv, val_loss = eval(args, model, device, val_loader)
-        test_enr, test_auc, test_range_auc, test_ppv, test_loss = eval(args, model, device, test_loader)
+        val_enr, val_range_auc, val_ppv, val_loss = eval(args, model, device, val_loader)
+        test_enr, test_range_auc, test_ppv, test_loss = eval(args, model, device, test_loader)
 
         print("enrichment:train: %f val: %f test: %f" % (train_enr, val_enr, test_enr))
-        print("roc auc:train: %f val: %f test: %f" % (train_auc, val_auc, test_auc))
+        # print("roc auc:train: %f val: %f test: %f" % (train_auc, val_auc, test_auc))
+        print(f"range logAUC: train: {train_range_auc}, val:{val_range_auc}, test:{test_range_auc}")
         print("ppv: train: %f val: %f test: %f" % (train_ppv, val_ppv, test_ppv))
         logger.report_scalar(title='enrichment', series='train_acc', value=train_enr, iteration=epoch)
         logger.report_scalar(title='enrichment', series='valid_acc', value=val_enr, iteration=epoch)
         logger.report_scalar(title='enrichment', series='test_acc', value=test_enr, iteration=epoch)
 
-        logger.report_scalar(title='roc_auc', series='train_auc', value=train_auc, iteration=epoch)
-        logger.report_scalar(title='roc_auc', series='valid_auc', value=val_auc, iteration=epoch)
-        logger.report_scalar(title='roc_auc', series='test_auc', value=test_auc, iteration=epoch)
+        # logger.report_scalar(title='roc_auc', series='train_auc', value=train_auc, iteration=epoch)
+        # # logger.report_scalar(title='roc_auc', series='valid_auc', value=val_auc, iteration=epoch)
+        # logger.report_scalar(title='roc_auc', series='test_auc', value=test_auc, iteration=epoch)
 
         logger.report_scalar(title=f'AUC for FPR in [{FPR_RANGE[0],FPR_RANGE[1]}]', series='train_auc', value=train_range_auc, iteration=epoch)
         logger.report_scalar(title=f'AUC for FPR in [{FPR_RANGE[0],FPR_RANGE[1]}]', series='valid_auc', value=val_range_auc, iteration=epoch)
