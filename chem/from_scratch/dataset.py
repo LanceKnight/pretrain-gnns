@@ -1,21 +1,38 @@
-from torch_geometric.data import InMemoryDataset
+from torch_geometric.data import InMemoryDataset, Data
 from ogb.utils import smiles2graph as ogb_smiles2graph
+import torch
+import os
+from tqdm import tqdm
+import pandas as pd
+
+
+def convert_to_single_emb(x, offset=512):
+    feature_num = x.size(1) if len(x.size()) > 1 else 1
+    feature_offset = 1 + \
+        torch.arange(0, feature_num * offset, offset, dtype=torch.long)
+    x = x + feature_offset
+    return x
+
+
+def preprocessing(item):
+    item.x = convert_to_single_emb(item.x)
+    return item
 
 
 class QSARDataset(InMemoryDataset):
     def __init__(self,
-                 root,
+                 root='../dataset/qsar_benchmark2015/',
                  D=3,
                  transform=None,
                  pre_transform=None,
                  pre_filter=None,
-                 dataset='435008',
+                 dataset='435034',
                  empty=False):
 
         self.dataset = dataset
         self.root = root
         self.D = D
-        super(MyQSARDataset, self).__init__(root, transform, pre_transform, pre_filter)
+        super(QSARDataset, self).__init__(root, transform, pre_transform, pre_filter)
         self.transform, self.pre_transform, self.pre_filter = transform, pre_transform, pre_filter
 
         if not empty:
@@ -24,8 +41,6 @@ class QSARDataset(InMemoryDataset):
     @property
     def raw_file_names(self):
         file_name_list = os.listdir(self.raw_dir)
-        # assert len(file_name_list) == 1     # currently assume we have a
-        # # single raw file
         return file_name_list
 
     @ property
@@ -35,9 +50,6 @@ class QSARDataset(InMemoryDataset):
     def download(self):
         raise NotImplementedError('Must indicate valid location of raw data. '
                                   'No download allowed')
-
-    # def __getitem__(self, index):
-    #     return self.get(index)
 
     def process(self):
         data_smiles_list = []
@@ -61,16 +73,16 @@ class QSARDataset(InMemoryDataset):
                 smi = smiles_list[i]
 
                 try:
-                    graph = ogb_smiles2graph(smi)
+                    graph_dict = ogb_smiles2graph(smi)
                 except:
                     print('cannot convert smiles to graph')
                     pass
 
                 data = Data()
-                data.__num_nodes__ = int(graph['num_nodes'])
-                data.edge_index = torch.from_numpy(graph['edge_index']).to(torch.int64)
-                data.edge_attr = torch.from_numpy(graph['edge_feat']).to(torch.int64)
-                data.x = torch.from_numpy(graph['node_feat']).to(torch.int64)
+                data.__num_nodes__ = int(graph_dict['num_nodes'])
+                data.edge_index = torch.from_numpy(graph_dict['edge_index']).to(torch.int64)
+                data.edge_attr = torch.from_numpy(graph_dict['edge_feat']).to(torch.int64)
+                data.x = torch.from_numpy(graph_dict['node_feat']).to(torch.int64)
 
                 data.idx = i
                 data.y = torch.tensor([label], dtype=torch.float32)
@@ -108,10 +120,12 @@ class QSARDataset(InMemoryDataset):
         if isinstance(idx, int):
             item = self.get(self.indices()[idx])
             item.idx = idx
-            return preprocess_item(item)
+            return preprocessing(item)
         else:
             return self.index_select(idx)
 
 
 if __name__ == '__main__':
     dataset = QSARDataset()
+    data = dataset[0]
+    print(data.x)
