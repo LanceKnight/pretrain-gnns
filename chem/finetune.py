@@ -149,7 +149,7 @@ def eval(args, model, device, loader):
 def main():
     # start clearml as the task manager. this is optional.
 
-    task = Task.init(project_name="Tests/KGNN", task_name="get_running", tags="For QE")
+    task = Task.init(project_name="Tests/KGNN", task_name="get 10K QSAR data", tags="For QE")
     logger = task.get_logger()
 
     # ==========settings==========
@@ -231,11 +231,11 @@ def main():
 
     dataset = MoleculeDataset(D=args.D, root=root, dataset=dataset, pre_transform=ToXAndPAndEdgeAttrForDeg())
     print(f'dataset[0]:{dataset[0]}')
-    if args.num_samples != -1:
-        index = list(range(args.num_samples))
-        dataset = dataset[index]
-    else:
-        dataset = datset
+    # if args.num_samples != -1:
+    #     index = list(range(args.num_samples))
+    #     dataset = dataset[index]
+    # else:
+    #     dataset = datset
     print(f'dataset:{dataset}')
 
     # ==========splitting datasets==========
@@ -252,9 +252,9 @@ def main():
             'dataset/' + args.dataset + '/processed/smiles.csv', header=None)[0].tolist()
         train_dataset, valid_dataset, test_dataset = random_scaffold_split(dataset, smiles_list, null_value=0, frac_train=0.8, frac_valid=0.1, frac_test=0.1, seed=args.seed)
         print("random scaffold")
-    elif args.split == 'lit-pcba':
-        # train_dataset
-        pass
+    elif args.split == 'QE':
+        train_dataset = dataset[[torch.tensor(x) for x in range(0, 326)] + [torch.tensor(x) for x in range(1000, 10674)]]
+        valid_dataset = dataset[[torch.tensor(x) for x in range(326, 362)] + [torch.tensor(x) for x in range(20000, 29964)]]
     else:
         raise ValueError("Invalid split option.")
 
@@ -265,9 +265,9 @@ def main():
     num_valid_active = len(torch.nonzero(torch.tensor([data.y for data in valid_dataset])))
     num_valid_inactive = len(valid_dataset) - num_valid_active
     print(f'valid size: {len(valid_dataset)}, actives: {num_valid_active}')
-    num_test_active = len(torch.nonzero(torch.tensor([data.y for data in test_dataset])))
-    num_test_inactive = len(test_dataset) - num_test_active
-    print(f'test size: {len(test_dataset)}, actives: {num_test_active}')
+    # num_test_active = len(torch.nonzero(torch.tensor([data.y for data in test_dataset])))
+    # num_test_inactive = len(test_dataset) - num_test_active
+    # print(f'test size: {len(test_dataset)}, actives: {num_test_active}')
 
     print('loading data')
     train_sampler_weight = torch.tensor([(1. / num_train_inactive) if data.y == 0 else (1. / num_train_active) for data in train_dataset])
@@ -282,7 +282,7 @@ def main():
 
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, sampler=train_sampler)
     val_loader = DataLoader(valid_dataset, batch_size=len(valid_dataset), shuffle=True, num_workers=args.num_workers)  # , sampler=valid_sampler)
-    test_loader = DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False, num_workers=args.num_workers)  # , sampler=test_sampler)
+    # test_loader = DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False, num_workers=args.num_workers)  # , sampler=test_sampler)
     print('data loaded!')
     # for batch in train_loader:
     #     target = batch.y
@@ -350,10 +350,10 @@ def main():
             print("omit the training accuracy computation")
             train_auc = 0
         val_auc, val_loss = eval(args, model, device, val_loader)
-        test_auc, test_loss = eval(args, model, device, test_loader)
+        # test_auc, test_loss = eval(args, model, device, test_loader)
 
         # print("enrichment:train: %f val: %f test: %f" % (train_enr, val_enr, test_enr))
-        print("roc auc:train: %f val: %f test: %f" % (train_auc, val_auc, test_auc))
+        # print("roc auc:train: %f val: %f test: %f" % (train_auc, val_auc, test_auc))
         # print("ppv: train: %f val: %f test: %f" % (train_ppv, val_ppv, test_ppv))
         # logger.report_scalar(title='enrichment', series='train_acc', value=train_enr, iteration=epoch)
         # logger.report_scalar(title='enrichment', series='valid_acc', value=val_enr, iteration=epoch)
@@ -368,7 +368,7 @@ def main():
         # logger.report_scalar(title='ppv', series='test_ppv', value=test_ppv, iteration=epoch)
 
         logger.report_scalar(title='loss', series='valid_loss', value=val_loss, iteration=epoch)
-        logger.report_scalar(title='loss', series='test_loss', value=test_loss, iteration=epoch)
+        # logger.report_scalar(title='loss', series='test_loss', value=test_loss, iteration=epoch)
 
         # val_acc_list.append(val_acc)
         # test_acc_list.append(test_acc)
