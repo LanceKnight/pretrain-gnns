@@ -26,7 +26,7 @@ from datetime import datetime
 from clearml import Task
 
 from model import GNN_graphpred
-from evaluation import enrichment, roc_auc, ppv
+from evaluation import enrichment, calculate_logAUC, ppv
 from util import print_model_size
 from loader import ToXAndPAndEdgeAttrForDeg
 import time
@@ -36,7 +36,7 @@ time_stamp = datetime.now().strftime("%b-%d-%Y_%Hh%Mm%Ss")
 criterion = nn.BCEWithLogitsLoss(reduction='mean')
 # criterion = nn.BCELoss()
 
-
+logAUC_range = (0.001, 0.1)
 def train(args, model, device, loader, optimizer):
 
     model.train()
@@ -77,7 +77,7 @@ def train(args, model, device, loader, optimizer):
         back_start = time.time()
         loss.backward()
         back_end = time.time()
-        print(f'backprop time{back_end-back_start}')
+        # print(f'backprop time{back_end-back_start}')
 
         optimizer.step()
         end = time.time()
@@ -128,9 +128,9 @@ def eval(args, model, device, loader):
     ppv_list = []
 
     print(f'y_true:{y_true.shape}')
-    enrichment_list.append(enrichment(y_true, y_scores))
-    roc_auc_list.append(roc_auc(y_true, y_scores))
-    ppv_list.append(ppv(y_true, y_scores))
+    # enrichment_list.append(enrichment(y_true, y_scores))
+    roc_auc_list.append(calculate_logAUC(y_true, y_scores, logAUC_range))
+    # ppv_list.append(ppv(y_true, y_scores))
 
     # for i in range(y_true.shape[1]):
     #     # AUC is only defined when there is at least one positive data.
@@ -139,17 +139,17 @@ def eval(args, model, device, loader):
     #         enrichment_list.append(roc_auc_score(
     #             (y_true[is_valid, i] + 1) / 2, y_scores[is_valid, i]))
 
-    if len(enrichment_list) < y_true.shape[1]:
-        print("Some target is missing!")
-        print("Missing ratio: %f" % (1 - float(len(enrichment_list)) / y_true.shape[1]))
+    # if len(enrichment_list) < y_true.shape[1]:
+    #     print("Some target is missing!")
+    #     print("Missing ratio: %f" % (1 - float(len(enrichment_list)) / y_true.shape[1]))
 
-    return sum(enrichment_list) / len(enrichment_list), sum(roc_auc_list) / len(roc_auc_list), sum(ppv_list) / len(ppv_list), batch_loss
+    return sum(roc_auc_list) / len(roc_auc_list), batch_loss
 
 
 def main():
     # start clearml as the task manager. this is optional.
 
-    task = Task.init(project_name="Tests", task_name="fix-slow", tags="slow-test")
+    task = Task.init(project_name="Tests/KGNN", task_name="get_running", tags="For QE")
     logger = task.get_logger()
 
     # ==========settings==========
@@ -345,27 +345,27 @@ def main():
 
         print("====Evaluation")
         if args.eval_train:
-            train_enr, train_auc, train_ppv = eval(args, model, device, train_loader)
+            train_auc = eval(args, model, device, train_loader)
         else:
             print("omit the training accuracy computation")
-            train_enr = train_auc = train_ppv = 0
-        val_enr, val_auc, val_ppv, val_loss = eval(args, model, device, val_loader)
-        test_enr, test_auc, test_ppv, test_loss = eval(args, model, device, test_loader)
+            train_auc = 0
+        val_auc, val_loss = eval(args, model, device, val_loader)
+        test_auc, test_loss = eval(args, model, device, test_loader)
 
-        print("enrichment:train: %f val: %f test: %f" % (train_enr, val_enr, test_enr))
+        # print("enrichment:train: %f val: %f test: %f" % (train_enr, val_enr, test_enr))
         print("roc auc:train: %f val: %f test: %f" % (train_auc, val_auc, test_auc))
-        print("ppv: train: %f val: %f test: %f" % (train_ppv, val_ppv, test_ppv))
-        logger.report_scalar(title='enrichment', series='train_acc', value=train_enr, iteration=epoch)
-        logger.report_scalar(title='enrichment', series='valid_acc', value=val_enr, iteration=epoch)
-        logger.report_scalar(title='enrichment', series='test_acc', value=test_enr, iteration=epoch)
+        # print("ppv: train: %f val: %f test: %f" % (train_ppv, val_ppv, test_ppv))
+        # logger.report_scalar(title='enrichment', series='train_acc', value=train_enr, iteration=epoch)
+        # logger.report_scalar(title='enrichment', series='valid_acc', value=val_enr, iteration=epoch)
+        # logger.report_scalar(title='enrichment', series='test_acc', value=test_enr, iteration=epoch)
 
-        logger.report_scalar(title='roc_auc', series='train_roc', value=train_auc, iteration=epoch)
-        logger.report_scalar(title='roc_auc', series='valid_roc', value=val_auc, iteration=epoch)
-        logger.report_scalar(title='roc_auc', series='test_roc', value=test_auc, iteration=epoch)
+        logger.report_scalar(title='LogAUC by Epoch', series='train_roc', value=train_auc, iteration=epoch)
+        logger.report_scalar(title='LogAUC by Epoch', series='valid_roc', value=val_auc, iteration=epoch)
+        # logger.report_scalar(title='LogAUC by Epoch', series='test_roc', value=test_auc, iteration=epoch)
 
-        logger.report_scalar(title='ppv', series='train_ppv', value=train_ppv, iteration=epoch)
-        logger.report_scalar(title='ppv', series='valid_ppv', value=val_ppv, iteration=epoch)
-        logger.report_scalar(title='ppv', series='test_ppv', value=test_ppv, iteration=epoch)
+        # logger.report_scalar(title='ppv', series='train_ppv', value=train_ppv, iteration=epoch)
+        # logger.report_scalar(title='ppv', series='valid_ppv', value=val_ppv, iteration=epoch)
+        # logger.report_scalar(title='ppv', series='test_ppv', value=test_ppv, iteration=epoch)
 
         logger.report_scalar(title='loss', series='valid_loss', value=val_loss, iteration=epoch)
         logger.report_scalar(title='loss', series='test_loss', value=test_loss, iteration=epoch)
