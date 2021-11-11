@@ -484,7 +484,7 @@ class BaseKernelSetConv(Module):
         inputs:
         data: graph data containing feature matrix, adjacency matrix, edge_attr matrix
         '''
-        start = time.time()
+        # start = time.time()
         if len(argv) != 0:
             raise Exception(
                 'Kernel does not take positional argument, use keyword argument instead. e.g. model(data=data)')
@@ -616,8 +616,8 @@ class BaseKernelSetConv(Module):
         # print(f'sc:{sc}')
         if(save_score == True):
             self.save_score(sc)  # save scores for analysis
-        end = time.time()
-        print(f'BaseKernelSetConv time:{end -start}')
+        # end = time.time()
+        # print(f'BaseKernelSetConv time:{end -start}')
         return sc
 
 

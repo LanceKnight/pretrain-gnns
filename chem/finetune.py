@@ -60,6 +60,8 @@ def train(args, model, device, loader, optimizer):
                         batch.nei_index_deg1, batch.nei_index_deg2, batch.nei_index_deg3, batch.nei_index_deg4
                         )
         y = batch.y.view(pred.shape).to(torch.float64)
+        print(f'train pred:{pred}')
+        print(f'train y:{y}')
 
         # print('pred:')
         # print(pred)
@@ -81,7 +83,7 @@ def train(args, model, device, loader, optimizer):
 
         optimizer.step()
         end = time.time()
-        print(f'batch time:{end-start}')
+        # print(f'batch time:{end-start}')
     batch_loss = sum(loss_lst) / float(len(loader))
     print(f'loss:{batch_loss}')
     return batch_loss
@@ -210,7 +212,8 @@ def main():
     # ==========seeds==========
     torch.manual_seed(args.runseed)
     np.random.seed(args.runseed)
-    device = torch.device("cuda:" + str(args.device)) if torch.cuda.is_available() else torch.device("cpu")
+    device = 'cpu'
+    # device = torch.device("cuda:" + str(args.device)) if torch.cuda.is_available() else torch.device("cpu")
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.runseed)
 
@@ -293,7 +296,7 @@ def main():
                           edge_attr_dim=1, JK=args.JK, drop_ratio=args.dropout_ratio, graph_pooling=args.graph_pooling, predefined_kernelsets=args.predefined_kernelsets)
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
-        model = nn.DataParallel(model)
+        # model = nn.DataParallel(model)
 
     # # check model size
     # print_model_size(model)
