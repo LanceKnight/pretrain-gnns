@@ -348,10 +348,10 @@ def main():
 
         print("====Evaluation")
         if args.eval_train:
-            train_auc = eval(args, model, device, train_loader)
+            train_auc, train_loss_no_dropout = eval(args, model, device, train_loader)
         else:
             print("omit the training accuracy computation")
-            train_auc = 0
+            train_auc, train_loss_no_dropout = 0
         val_auc, val_loss = eval(args, model, device, val_loader)
         # test_auc, test_loss = eval(args, model, device, test_loader)
 
@@ -362,15 +362,18 @@ def main():
         # logger.report_scalar(title='enrichment', series='valid_acc', value=val_enr, iteration=epoch)
         # logger.report_scalar(title='enrichment', series='test_acc', value=test_enr, iteration=epoch)
 
-        logger.report_scalar(title='LogAUC by Epoch', series='train_roc', value=train_auc, iteration=epoch)
+        logger.report_scalar(title='LogAUC by Epoch', series='train_roc_no_dropout', value=train_auc, iteration=epoch)
         logger.report_scalar(title='LogAUC by Epoch', series='valid_roc', value=val_auc, iteration=epoch)
+        # logger.report_scalar(title='LogAUC by Epoch', series='train_roc_no_dropout', value=train_auc, iteration=epoch)
         # logger.report_scalar(title='LogAUC by Epoch', series='test_roc', value=test_auc, iteration=epoch)
 
         # logger.report_scalar(title='ppv', series='train_ppv', value=train_ppv, iteration=epoch)
         # logger.report_scalar(title='ppv', series='valid_ppv', value=val_ppv, iteration=epoch)
         # logger.report_scalar(title='ppv', series='test_ppv', value=test_ppv, iteration=epoch)
 
+        logger.report_scalar(title='loss', series='train_loss', value=loss, iteration=epoch)
         logger.report_scalar(title='loss', series='valid_loss', value=val_loss, iteration=epoch)
+        logger.report_scalar(title='loss', series = 'train_no_dropout', value = train_loss_no_dropout, iteration = epoch)
         # logger.report_scalar(title='loss', series='test_loss', value=test_loss, iteration=epoch)
 
         # val_acc_list.append(val_acc)
